@@ -88,6 +88,9 @@ skills_dir_for() {
 }
 # Nombre que espera 'engram setup <agente>'
 engram_agent_arg() { case "$1" in claude) echo "claude-code" ;; *) echo "$1" ;; esac; }
+# OpenSpec NO necesita una función equivalente: sus tool IDs (--tools) son
+# idénticos a nuestro $AGENT — claude, cursor, codex, opencode — 1:1. Se pasa
+# "$AGENT" directo a `openspec init --tools`. Ver "Orquestar los motores".
 reads_agentsmd_natively() { case "$1" in cursor|codex|opencode) return 0 ;; *) return 1 ;; esac; }
 
 detect_agents() {
@@ -251,8 +254,27 @@ inject_agents_block
 # --- Orquestar los motores (ellos hacen su propio wiring por-agente) ---
 step "Cableando workflow y memoria…"
 if command -v openspec >/dev/null 2>&1; then
-  run "cd '$PROJECT_DIR' && openspec init"; ok "OpenSpec inicializado (openspec/)"
-else warn "OpenSpec ausente: corré 'openspec init' cuando lo instales"; fi
+  if [[ -d "$PROJECT_DIR/openspec" ]]; then
+    # Ya inicializado: refrescar config por-agente, no re-inicializar (init
+    # con --force podría tocar specs/changes existentes de forma destructiva).
+    run "cd '$PROJECT_DIR' && openspec update"
+    ok "OpenSpec ya estaba inicializado — config regenerada (openspec update)"
+  else
+    # --tools: mismo valor que $AGENT — los tool IDs de OpenSpec (claude,
+    # cursor, codex, opencode) son 1:1 con los nuestros, sin mapeo. Sin
+    # --tools, `openspec init` pregunta interactivo y cuelga en modo --yes/CI.
+    # No pasamos --profile: el surface por defecto de OpenSpec (explore +
+    # propose, más apply/archive/sync) ya es el lean/"core" que queremos —
+    # "expanded" es opt-in aparte vía `openspec config profile`, no un flag
+    # de init.
+    OPENSPEC_FORCE_FLAG=""
+    if [[ $ASSUME_YES -eq 1 || ! -t 0 ]]; then OPENSPEC_FORCE_FLAG="--force"; fi
+    run "cd '$PROJECT_DIR' && openspec init --tools '$AGENT' $OPENSPEC_FORCE_FLAG"
+    ok "OpenSpec inicializado (openspec/, tools=$AGENT)"
+  fi
+else
+  warn "OpenSpec ausente: corré 'openspec init --tools $AGENT' cuando lo instales"
+fi
 
 if command -v engram >/dev/null 2>&1; then
   run "engram setup $(engram_agent_arg "$AGENT")"; ok "Engram cableado (MCP) para $AGENT"

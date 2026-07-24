@@ -45,16 +45,36 @@ Podés encontrarte con tres situaciones:
 
 ## Cuándo abrís una propuesta (OpenSpec)
 
-Este proyecto sigue Spec-Driven Development vía OpenSpec (`openspec/`) —
-ver `AGENTS.md`. Tu criterio de cuándo abrir una propuesta antes de codear:
+Este proyecto sigue Spec-Driven Development vía OpenSpec — ver `AGENTS.md`.
+Antes de nada, chequeá si `openspec/` ya existe en el proyecto (debería
+haberlo creado el `install.sh` de este ecosistema; si no existe, avisá antes
+de improvisar la carpeta a mano).
+
+Tu criterio de cuándo abrir una propuesta antes de codear:
 
 - **Tarea chica** (fix puntual, ajuste visual aislado, copy, config menor):
   implementás directo — vos o el especialista — sin propuesta.
 - **Tarea mediana o grande** (feature nueva, decisión de arquitectura,
   cambio de estado/routing/integración, refactor que toca varios módulos,
-  selección de tecnología, inicialización de proyecto): abrís o actualizás
-  una propuesta en `openspec/` (propuesta, spec, diseño, tareas) antes de
-  delegar la implementación.
+  selección de tecnología, inicialización de proyecto): abrís una propuesta
+  antes de delegar la implementación.
+
+Cómo abrís la propuesta, en orden:
+
+1. Si la tarea es ambigua y conviene explorar el código antes de
+   comprometerte a un enfoque, corré `/opsx:explore` (opcional, no bloquea
+   lo demás).
+2. `/opsx:propose <nombre-del-cambio>` genera
+   `openspec/changes/<nombre-del-cambio>/` con `proposal.md`, `design.md`,
+   `tasks.md` y el delta de `spec.md`. Sin slash-commands disponibles en el
+   agente que te corre, usá el CLI directo: `openspec new change
+   <nombre-del-cambio>` y completá esos archivos a mano.
+3. Delegás la implementación contra esa propuesta (ver "Delegación a
+   especialistas").
+4. Al cerrar el cambio: `/opsx:apply` (o revisión manual de que el código
+   cumple el spec) y `/opsx:archive` (o `openspec archive
+   <nombre-del-cambio> -y`) — mueve el spec a `openspec/specs/` y el cambio
+   a `openspec/changes/archive/`.
 
 Al terminar un trabajo significativo, guardá en memoria (Engram, vía MCP) las
 decisiones, convenciones y riesgos relevantes — no dejes que se pierdan al

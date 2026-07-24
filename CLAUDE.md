@@ -178,7 +178,7 @@ ecosystem. Reading it top to bottom explains the whole install flow:
 2. Detects which AI agent binary is installed (`claude`, `cursor`, `codex`, `opencode`); prompts if 0 or 2+ found.
 3. Checks for the two external "engines" this ecosystem depends on — OpenSpec (spec-driven dev workflow) and Engram (persistent memory via MCP) — and offers (never forces) to install missing ones.
 4. Copies `skills/core/` + the detected framework's skill dir (including its vendored reference and any nested `references/` files, since it copies the whole subtree) + `personas/` into the agent's own global skills directory (e.g. `~/.claude/skills`) — never into the target repo.
-5. Injects the `AGENTS.md` content into the target project's `AGENTS.md` as an idempotent `<!-- FEA:START -->...<!-- FEA:END -->` block, then runs `openspec init` and `engram setup <agent>`.
+5. Injects the `AGENTS.md` content into the target project's `AGENTS.md` as an idempotent `<!-- FEA:START -->...<!-- FEA:END -->` block, then runs `openspec init --tools "$AGENT"` (first run) or `openspec update` (if `openspec/` already exists — avoids re-running `init --force` over real specs) and `engram setup <agent>`. OpenSpec's tool IDs are identical to this script's own `$AGENT` values, so no mapping function is needed there (unlike `engram_agent_arg()`).
 
 Key flags: `--project <path>`, `--agent <name>`, `--yes`, `--dry-run`, `--with <domain1,domain2>`.
 
@@ -196,3 +196,13 @@ stack without being asked.
 - **Project** (`AGENTS.md`, `openspec/`, `docs/` inside the target repo): product and technical knowledge specific to that project, committed and travels with that repo.
 
 Don't conflate the two when editing `install.sh` or adding new skills/personas.
+
+**Deliberate exception:** files that `openspec init` generates inside the
+*target* repo (`.claude/skills/openspec-*/SKILL.md`, `.claude/commands/opsx/*.md`,
+and the `.cursor/`/`.codex/`/`.opencode/` equivalents) are project-local by
+OpenSpec's own design, not ours — they're committed to the client's repo
+alongside `openspec/`. This is not an inconsistency with the rule above: it's
+OpenSpec doing its own per-agent wiring (see the `openspec init` call in
+install.sh's "Orquestar los motores" step). Don't "fix" this by trying to
+move OpenSpec's generated skills/commands into the agent's global skills dir
+— that's not how the tool is designed to work.

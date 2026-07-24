@@ -112,6 +112,17 @@ agente (viajan con vos, no ensucian el repo), inyecta tus estándares en
 - **Proyecto** (`AGENTS.md`, `openspec/`): conocimiento de ese producto, se
   commitea y viaja con el repo.
 
+> **Excepción deliberada:** los archivos que genera `openspec init` dentro del
+> proyecto target (p. ej. `.claude/skills/openspec-*/SKILL.md`,
+> `.claude/commands/opsx/*.md`, y sus equivalentes `.cursor/`, `.codex/`,
+> `.opencode/`) son *project-local* a propósito — los coloca OpenSpec, no
+> nosotros, y se commitean con el repo del cliente junto a `openspec/`. No es
+> una inconsistencia con la regla de arriba: es el propio motor OpenSpec
+> haciendo su wiring por-agente (ver el paso "Orquestar los motores" de
+> `install.sh`). Si ves `.claude/skills/openspec-*` adentro de un repo de
+> cliente, es lo esperado — no lo confundas con una fuga de nuestras skills
+> globales (`~/.claude/skills/`), que siguen viviendo solo en tu máquina.
+
 ## Roadmap de skills
 
 - [x] `core/accessibility-a11y` — principios de accesibilidad (qué revisar)
