@@ -3,7 +3,7 @@
 # install.sh — equipa CUALQUIER proyecto con este ecosistema de IA.
 #
 # Qué hace, en orden:
-#   1. Detecta el package manager y el STACK del proyecto (Angular/React) leyendo package.json
+#   1. Detecta el package manager y el STACK del proyecto (Angular/React/Next) leyendo package.json
 #   2. Detecta el AGENTE de IA (si hay 0 o varios, pregunta; si hay 1, sigue)
 #   3. Chequea los MOTORES (OpenSpec, Engram). Si falta alguno, te dice cuál y
 #      OFRECE instalarlo con el comando correcto para tu SO (no instala a la fuerza)
@@ -188,9 +188,15 @@ step "Proyecto: $PROJECT_DIR"
 PM="$(detect_pm)"; log "package manager: $PM"
 
 # --- Stack ---
+# Next incluye "react" como dependencia, pero no querés las dos mitades a la
+# vez: next/ ya asume React (ver next-conventions). Next gana si está.
 FRAMEWORKS=()
 has_dep "@angular/core" && FRAMEWORKS+=("angular")
-has_dep "react"         && FRAMEWORKS+=("react")
+if has_dep "next"; then
+  FRAMEWORKS+=("next")
+elif has_dep "react"; then
+  FRAMEWORKS+=("react")
+fi
 if [[ ${#FRAMEWORKS[@]} -eq 0 ]]; then log "stack front: ninguno detectado (solo core)"
 else log "stack front: ${FRAMEWORKS[*]}"; fi
 

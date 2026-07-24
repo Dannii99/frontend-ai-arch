@@ -14,6 +14,12 @@ spec. Cada cambio no trivial vive en `openspec/` con su propuesta, spec, diseño
 y tareas. El código se implementa contra el spec acordado, no contra un prompt
 suelto. Cambios chicos: revisar, implementar, archivar, repetir.
 
+**Contexto de producto antes que arquitectura.** Si existe
+`docs/project-context.md` (objetivo, MVP, reglas de negocio en lenguaje
+humano), leerlo antes de decidir arquitectura o implementar. `docs/` (producto)
+y `openspec/` (specs técnicas) son carpetas distintas, con dueños distintos —
+no se mezclan.
+
 **Memoria (Engram, vía MCP).** Las decisiones, bugs resueltos y convenciones se
 guardan en memoria persistente. Al empezar una sesión, recuperá el contexto del
 proyecto antes de actuar. Guardá lo significativo al terminar trabajo relevante.
@@ -27,8 +33,8 @@ ya está encapsulado en una skill.
 - **Testing:** cobertura significativa; los tests fallan por la razón correcta.
 - **Performance:** respetar el budget de bundle y métricas de carga.
 - **Deploy safety:** nada de dev (URLs locales, endpoints de staging, tokens,
-  valores hardcodeados) se filtra al build de producción. Ver la skill
-  `angular-deploy-safety`.
+  valores hardcodeados) se filtra al build de producción. Ver la skill de
+  deploy-safety del framework correspondiente (p. ej. `angular-deploy-safety`).
 
 ## Reglas del proyecto (completar por proyecto)
 

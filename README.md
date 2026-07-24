@@ -31,14 +31,58 @@ fina de adaptadores dentro de `install.sh`.
 ├── AGENTS.md                     # estándares canónicos (se inyectan al proyecto)
 ├── skills/                       # tu IP: cómo trabajás, encapsulado
 │   ├── README.md                 # convención core vs framework
-│   ├── core/                     # SIEMPRE (a11y, testing, performance…)
-│   ├── angular/                  # solo si el proyecto usa Angular
-│   │   └── angular-deploy-safety/SKILL.md
-│   └── react/                    # solo si el proyecto usa React
-├── personas/                     # roles (arquitecto, reviewer…)
-│   └── frontend-architect.md
+│   ├── core/                     # SIEMPRE — agnóstico de framework
+│   │   ├── accessibility-a11y/
+│   │   ├── frontend-clean-code/          # calidad micro: nombres, tipos, funciones
+│   │   ├── frontend-design-principles/   # SOLID + patrones (Facade, Repository, Adapter)
+│   │   ├── ui-visual-craft/
+│   │   ├── motion-design-system/
+│   │   └── documentation-writer/
+│   ├── angular/                   # solo si el proyecto usa Angular
+│   │   ├── skills-main/           # vendored: angular/skills oficial (referencia dura)
+│   │   ├── angular-architecture/  # tu criterio: carpetas, estado, testing
+│   │   └── angular-deploy-safety/
+│   ├── react/                     # solo si el proyecto usa React puro (sin Next)
+│   │   ├── vercel-react-best-practices/  # vendored: referencia de performance
+│   │   └── react-architecture/    # tu criterio: carpetas, server/client state, testing
+│   ├── next/                      # solo si el proyecto usa Next (gana sobre react/)
+│   │   ├── next-best-practices/   # referencia dura, API por API
+│   │   └── next-conventions/      # tu criterio: Server/Client, data, optimización
+│   └── domains/                   # opt-in, nunca se auto-cargan por stack
+│       ├── conversion-ui/
+│       └── next-partial-prefetching-adoption/
+├── personas/                     # roles: quién hace qué con las skills de arriba
+│   ├── frontend-architect.md     # orquestador: decide stack, delega, abre specs
+│   ├── frontend-angular-senior.md
+│   ├── frontend-react-next.md
+│   └── project-owner.md          # scoping de producto, previo a cualquier decisión técnica
 └── install.sh                    # instalador: detecta stack + agente, orquesta motores
 ```
+
+Cada skill (menos las vendored) sigue el mismo patrón de dos capas por
+framework: una **referencia dura** (sintaxis/API — vendored, no se edita como
+si fuera propia) y una skill de **arquitectura** (las decisiones que esa
+referencia deja abiertas: carpetas, estado, testing — esa sí es tu criterio).
+`frontend-clean-code` y `frontend-design-principles` (core) son la capa que
+está por encima de las tres: agnósticas de framework, las citan las tres
+arquitecturas en vez de repetir contenido.
+
+## Personas: quién usa las skills
+
+Las skills son el *qué*; las personas son el *quién* y en qué orden:
+
+1. **`project-owner`** — antes de cualquier decisión técnica, convierte una
+   idea en `docs/project-context.md` (producto, MVP, reglas de negocio). No
+   toca código ni arquitectura.
+2. **`frontend-architect`** — lee ese contexto si existe, detecta o decide el
+   stack, y para cambios no triviales abre una propuesta en `openspec/` antes
+   de delegar. No implementa directamente.
+3. **`frontend-angular-senior`** / **`frontend-react-next`** — especialistas
+   de ejecución. Implementan apoyándose en las skills del framework
+   correspondiente; no reinventan el criterio que esas skills ya fijan.
+
+`docs/` (contexto de producto) y `openspec/` (specs técnicas) son carpetas
+distintas con dueños distintos — no se mezclan.
 
 ## Uso
 
@@ -70,8 +114,20 @@ agente (viajan con vos, no ensucian el repo), inyecta tus estándares en
 
 ## Roadmap de skills
 
-- [x] `angular/angular-deploy-safety` — seguridad de build/deploy productivo
-- [ ] `core/a11y-wcag` — principios de accesibilidad (qué revisar)
-- [ ] `core/testing` — estrategia de testing
-- [ ] `core/performance-budget` — Lighthouse / bundle size
-- [ ] `angular/…`, `react/…` — el *cómo* de cada framework
+- [x] `core/accessibility-a11y` — principios de accesibilidad (qué revisar)
+- [x] `core/frontend-clean-code`, `core/frontend-design-principles` — calidad
+      micro + SOLID/patrones
+- [x] `core/ui-visual-craft`, `core/motion-design-system`,
+      `core/documentation-writer`
+- [x] `angular/` — `angular-architecture` + `angular-deploy-safety` +
+      referencia oficial vendored (`skills-main`)
+- [x] `react/` — `react-architecture` + referencia de performance vendored
+      (`vercel-react-best-practices`)
+- [x] `next/` — `next-conventions` + referencia vendored (`next-best-practices`)
+- [x] `domains/conversion-ui`, `domains/next-partial-prefetching-adoption`
+      (opt-in)
+- [ ] `core/performance-budget` — presupuesto de bundle/Lighthouse como skill
+      propia (hoy vive disperso entre `vercel-react-best-practices` y
+      `ui-visual-craft`)
+- [ ] `vue/` — sin skills todavía; la persona de Vue se sacó hasta que exista
+      esta base (mismo patrón referencia + arquitectura que los otros tres)
