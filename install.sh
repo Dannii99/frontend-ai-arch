@@ -19,6 +19,7 @@
 #   ./install.sh --agent claude|cursor|codex|opencode   # fuerza el agente
 #   ./install.sh --yes                    # responde sí a las ofertas de instalación
 #   ./install.sh --dry-run                # muestra el plan sin tocar nada
+#   ./install.sh --with conversion-ui     # instala skill(s) opt-in de domains/
 #
 set -euo pipefail
 
@@ -30,6 +31,7 @@ PROJECT_DIR="$(pwd)"
 AGENT=""
 ASSUME_YES=0
 DRY_RUN=0
+DOMAINS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -37,6 +39,7 @@ while [[ $# -gt 0 ]]; do
     --agent)   AGENT="$2"; shift 2 ;;
     --yes|-y)  ASSUME_YES=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --with)    IFS=',' read -ra _d <<< "$2"; DOMAINS+=("${_d[@]}"); shift 2 ;;
     -h|--help) grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Opción desconocida: $1"; exit 1 ;;
   esac
@@ -144,6 +147,25 @@ copy_skill_group() {  # $1 = subcarpeta de skills/ ; $2 = dir destino
   ok "skills '$1' instaladas"
 }
 
+list_domains() {  # nombres de domains disponibles (portable, sin xargs)
+  local d
+  for d in "$ARCH_DIR"/skills/domains/*/; do
+    [[ -d "$d" ]] || continue
+    basename "$d"
+  done
+}
+
+copy_one_domain() {  # $1 = nombre del domain ; $2 = dir destino
+  local src="$ARCH_DIR/skills/domains/$1"
+  if [[ ! -f "$src/SKILL.md" ]]; then
+    warn "domain '$1' no existe. Disponibles: $(list_domains | tr '\n' ' ')"
+    return 1
+  fi
+  run "mkdir -p '$2/$1'"
+  run "cp -R '$src/.' '$2/$1/'"
+  ok "domain '$1' instalado (opt-in)"
+}
+
 # ---------------------------------------------------------------------------
 # 5. Inyectar bloque de estándares en AGENTS.md (idempotente, sin pisar lo ajeno)
 # ---------------------------------------------------------------------------
@@ -203,6 +225,13 @@ ensure_engram
 step "Instalando skills y personas…"
 copy_skill_group "core" "$SKILLS_DIR"
 for fw in "${FRAMEWORKS[@]}"; do copy_skill_group "$fw" "$SKILLS_DIR"; done
+# domains: opt-in explícito (NO se autocargan por stack)
+if [[ ${#DOMAINS[@]} -gt 0 ]]; then
+  for d in "${DOMAINS[@]}"; do copy_one_domain "$d" "$SKILLS_DIR"; done
+elif [[ -n "$(list_domains)" ]]; then
+  log "domains disponibles (opt-in): $(list_domains | tr '\n' ' ')"
+  log "  → incluí con --with <nombre> (ej: --with conversion-ui)"
+fi
 if [[ -d "$ARCH_DIR/personas" ]]; then
   run "mkdir -p '$SKILLS_DIR/_personas'"
   run "cp -R '$ARCH_DIR/personas/.' '$SKILLS_DIR/_personas/'"
@@ -232,5 +261,6 @@ fi
 
 step "Listo."
 log "Núcleo portable: skills (core${FRAMEWORKS:+ + ${FRAMEWORKS[*]}}) + personas + bloque AGENTS.md."
+[[ ${#DOMAINS[@]} -gt 0 ]] && log "Domains opt-in instalados: ${DOMAINS[*]}."
 log "Solo cambiaron las rutas según el agente — eso es la capa de adaptadores."
 [[ $DRY_RUN -eq 1 ]] && log "(fue un dry-run: no se tocó nada)"

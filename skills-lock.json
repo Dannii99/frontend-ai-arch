@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "next-partial-prefetching-adoption": {
+      "source": "vercel/next.js",
+      "sourceType": "github",
+      "skillPath": "skills/next-partial-prefetching-adoption/SKILL.md",
+      "computedHash": "205d9b85cc5ff13d791b1b4290fee41f61901d04fff54ede212c28d19622e2b4"
+    }
+  }
+}

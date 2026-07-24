@@ -1,45 +1,77 @@
-# Skills
+# Frontend AI Ecosystem
 
-Las skills se organizan por alcance para que el instalador cargue solo las
-relevantes al stack del proyecto. Un proyecto Angular no necesita las de React
-—cargar skills de más ensucia el contexto del agente y baja la calidad.
+Un ecosistema de IA portable para desarrollo frontend. No es un asistente atado
+a una herramienta: es una capa de **orden, memoria, skills y forma de trabajo**
+que se instala sobre **cualquier agente de IA** (Claude Code, Cursor, Codex,
+OpenCode…) y sobre cualquier proyecto, nuevo o existente.
 
-## Taxonomía
+La idea: que el agente cargue el criterio senior de frontend —accesibilidad,
+testing, performance, seguridad de deploy— para que el output sea consistente y
+con estándares, incluso cuando quien lo conduce no es experto en frontend.
+
+## Por qué es agent-agnóstico de verdad
+
+Se apoya en tres estándares abiertos (todos bajo la Linux Foundation), uno por
+cada pilar:
+
+| Pilar | Estándar | Qué aporta |
+|-------|----------|------------|
+| Cómo se trabaja | **Agent Skills (SKILL.md)** | Skills portables que corren sin cambios en 30+ agentes |
+| Orientación | **AGENTS.md** | Instrucciones de proyecto que lee cualquier agente |
+| Memoria | **MCP** | Memoria persistente (Engram) accesible desde cualquier agente |
+
+El **núcleo** (skills, personas, AGENTS.md) es idéntico en todos lados. Lo único
+específico de cada agente es **dónde va cada archivo** — eso vive en una capa
+fina de adaptadores dentro de `install.sh`.
+
+## Estructura
 
 ```
-skills/
-├── core/          # SIEMPRE se instalan. Principios agnósticos de framework.
-├── angular/       # Solo si el proyecto usa Angular.
-└── react/         # Solo si el proyecto usa React.
+.
+├── AGENTS.md                     # estándares canónicos (se inyectan al proyecto)
+├── skills/                       # tu IP: cómo trabajás, encapsulado
+│   ├── README.md                 # convención core vs framework
+│   ├── core/                     # SIEMPRE (a11y, testing, performance…)
+│   ├── angular/                  # solo si el proyecto usa Angular
+│   │   └── angular-deploy-safety/SKILL.md
+│   └── react/                    # solo si el proyecto usa React
+├── personas/                     # roles (arquitecto, reviewer…)
+│   └── frontend-architect.md
+└── install.sh                    # instalador: detecta stack + agente, orquesta motores
 ```
 
-## La regla core vs framework
+## Uso
 
-Muchas skills tienen un **principio universal** pero una **implementación
-específica**. La accesibilidad como concepto es igual en todos lados; cómo
-manejás foco y ARIA con Angular CDK vs con React cambia.
+**Una sola vez** (los motores): un agente de IA (Claude Code / Cursor / Codex /
+OpenCode), OpenSpec (`npm i -g @fission-ai/openspec@latest`) y Engram
+(`brew install gentleman-programming/tap/engram` o `go install …`). El
+instalador también los detecta y te ofrece instalarlos si faltan.
 
-- En `core/` va el **principio** y el **qué revisar** (agnóstico): p. ej.
-  "foco visible en todo elemento interactivo, contraste AA mínimo".
-- En la carpeta del framework va el **cómo se hace en ese framework**: p. ej.
-  el patrón concreto de foco con Angular CDK.
+**Por proyecto**, parado en el proyecto (nuevo o existente):
 
-Así, un proyecto siempre recibe el criterio (core) y, encima, la técnica del
-framework que realmente usa.
+```bash
+~/dev/tools/frontend-ai-ecosystem/install.sh          # detecta stack y agente
+~/dev/tools/frontend-ai-ecosystem/install.sh --dry-run # muestra el plan sin tocar
+~/dev/tools/frontend-ai-ecosystem/install.sh --agent cursor --yes
+```
 
-## Dónde va cada skill tuya
+El instalador detecta el framework por `package.json` e instala solo las skills
+relevantes (`core` + framework), coloca skills y personas en el dir global del
+agente (viajan con vos, no ensucian el repo), inyecta tus estándares en
+`AGENTS.md` como bloque idempotente, y orquesta `openspec init` y
+`engram setup` para que cada uno haga su propio wiring por-agente.
 
-- ¿Sirve igual para cualquier front? → `core/`
-- ¿Depende de APIs/archivos/patrones de un framework? → carpeta de ese framework
-  (ej. `angular-deploy-safety` vive de `angular.json` y `fileReplacements`, así
-  que va en `angular/`).
+## Dos destinos, una regla
 
-## Formato
+- **Global** (`~/.<agente>/skills/`, memoria de Engram): tuyo, viaja con vos,
+  no se commitea al repo del cliente. Tu IP no queda regada en repos ajenos.
+- **Proyecto** (`AGENTS.md`, `openspec/`): conocimiento de ese producto, se
+  commitea y viaja con el repo.
 
-Cada skill es una carpeta con un `SKILL.md` (estándar Agent Skills: frontmatter
-con `name` + `description`, y el cuerpo en Markdown). El mismo archivo funciona
-en Claude Code, Cursor, Codex y demás; solo cambia dónde lo coloca el instalador.
+## Roadmap de skills
 
-> Reescribí en tu voz y tus estándares cualquier skill que uses de referencia.
-> Una skill copiada tal cual no refleja tu criterio —y tu criterio es lo que te
-> distingue como arquitecto. Además evita problemas de licencia en un repo público.
+- [x] `angular/angular-deploy-safety` — seguridad de build/deploy productivo
+- [ ] `core/a11y-wcag` — principios de accesibilidad (qué revisar)
+- [ ] `core/testing` — estrategia de testing
+- [ ] `core/performance-budget` — Lighthouse / bundle size
+- [ ] `angular/…`, `react/…` — el *cómo* de cada framework
