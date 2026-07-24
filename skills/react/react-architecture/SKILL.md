@@ -28,7 +28,9 @@ siempre de la misma forma: dónde vive cada archivo, qué librería gestiona qu�
 estado, y qué se testea de verdad.
 
 Los principios universales (tipado, nombres, componentes chicos, una
-responsabilidad) viven en `frontend-clean-code` (core). Si algo aplica a
+responsabilidad) viven en `frontend-clean-code` (core); SOLID y los patrones
+de arquitectura (Facade, Repository, Adapter, límites entre módulos) viven en
+`frontend-design-principles` (core). Si algo aplica a
 cualquier front, no lo repitas acá: es core. Y si el proyecto es Next, no
 cargues esta skill además de `next/` — Next ya es React, y `next-conventions`
 cubre sus propias decisiones de Server/Client Components.

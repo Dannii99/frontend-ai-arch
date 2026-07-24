@@ -99,9 +99,11 @@ serializables, la excepción de las Server Actions), ver
 ## Qué NO va acá
 
 Los principios universales —tipado, nombres, estado, componentes chicos, a11y—
-viven en `frontend-clean-code` y `accessibility-a11y` (core). Acá va solo el
-*cómo se hace en Next*. Y como Next ya es React, en un proyecto Next no se cargan
-además las convenciones de React puro.
+viven en `frontend-clean-code` y `accessibility-a11y` (core); SOLID y los
+patrones de arquitectura (Facade, Repository, Adapter, límites entre módulos)
+viven en `frontend-design-principles` (core). Acá va solo el *cómo se hace en
+Next*. Y como Next ya es React, en un proyecto Next no se cargan además las
+convenciones de React puro.
 
 ## Referencias (capa profunda, se abren cuando hacen falta)
 

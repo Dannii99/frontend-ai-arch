@@ -26,8 +26,10 @@ siempre de la misma forma: dónde vive cada archivo, cuándo un estado necesita
 más que un signal, y qué se testea de verdad.
 
 Los principios universales (tipado, nombres, componentes chicos, una
-responsabilidad) viven en `frontend-clean-code` (core). Si algo aplica a
-cualquier front, no lo repitas acá: es core.
+responsabilidad) viven en `frontend-clean-code` (core); SOLID y los patrones
+de arquitectura (Facade, Repository, Adapter, límites entre módulos) viven en
+`frontend-design-principles` (core). Si algo aplica a cualquier front, no lo
+repitas acá: es core.
 
 ## Cuándo usar
 
