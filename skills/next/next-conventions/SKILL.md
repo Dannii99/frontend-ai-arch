@@ -16,9 +16,10 @@ metadata:
 
 # Next.js Conventions
 
-Esta skill no re-enseña Next — el modelo ya conoce la API. Fija las **decisiones**
-que exigís y los errores que Next hace fáciles de cometer, para que los defaults
-salgan bien. Es criterio, no manual.
+Esta skill no re-enseña Next — para eso está `next-best-practices` (referencia
+dura, API por API, en la misma carpeta). Acá van las **decisiones** que exigís
+y los errores que Next hace fáciles de cometer, para que los defaults salgan
+bien. Es criterio, no manual.
 
 Regla de fondo (como el resto de tus skills): respetá lo que el proyecto ya usa.
 Si está en Pages Router, no lo migres a App Router de prepo; si está en una
@@ -44,7 +45,8 @@ versión vieja, no fuerces APIs nuevas. Proponé, no impongas.
 
 Para los casos límite con ejemplos Bad/Good (client async, props no
 serializables, la excepción de las Server Actions), ver
-[references/rsc-boundaries.md](references/rsc-boundaries.md).
+[rsc-boundaries.md](../next-best-practices/rsc-boundaries.md) en
+`next-best-practices`.
 
 ## Data
 
@@ -103,9 +105,17 @@ además las convenciones de React puro.
 
 ## Referencias (capa profunda, se abren cuando hacen falta)
 
-- [references/rsc-boundaries.md](references/rsc-boundaries.md) — casos límite
-  Server↔Client con ejemplos Bad/Good.
-- Doc oficial para el detalle de API (no lo replicamos acá):
+Esta skill fija criterio, no repite la API completa de Next. Para el detalle
+línea por línea de cada tema (convenciones de archivos, async patterns, data
+patterns, metadata, imágenes, fuentes, bundling, hydration, etc.), está
+`next-best-practices` — la referencia dura, agnóstica de tus decisiones, que
+cubre Next.js API por API. No dupliques contenido de ahí acá: si una regla ya
+está en `next-best-practices`, esta skill solo la cita y decide un default.
+
+- [rsc-boundaries.md](../next-best-practices/rsc-boundaries.md) — casos límite
+  Server↔Client con ejemplos Bad/Good (el único tema que esta skill cita en
+  detalle, porque es donde más se rompe en la práctica).
+- Doc oficial para lo que ni siquiera `next-best-practices` cubra:
   https://nextjs.org/docs/app · https://react.dev/reference/rsc/use-client
 
 ## Al terminar, reportá

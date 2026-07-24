@@ -84,9 +84,9 @@ Regla: pocos efectos, bien ejecutados. Si dudás si un efecto suma, no va.
 
 ## No negociable
 
-- **Accesibilidad**: contraste AA mínimo; foco visible siempre; no depender solo
-  del color para comunicar estado; respetar `prefers-reduced-motion`; no poner
-  texto sobre fondos ruidosos sin overlay.
+- **Accesibilidad**: el checklist completo vive en `accessibility-a11y` (core)
+  — no lo repitas acá. Lo puntual de maquetación: no depender solo del color
+  para comunicar estado, y no poner texto sobre fondos ruidosos sin overlay.
 - **Performance**: preferir CSS, `transform` y `opacity`; evitar filtros pesados
   o `box-shadow` costosas en listas largas, blur grande animado, o efectos que
   sigan el mouse en muchos elementos. Canvas/WebGL solo si el proyecto lo

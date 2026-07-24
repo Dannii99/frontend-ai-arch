@@ -6,6 +6,10 @@ description: >-
   cuando se toque angular.json, environments, fileReplacements o el alias
   @env/environment, o cuando exista riesgo de que URLs de dev, endpoints
   locales, tokens o valores hardcodeados se filtren al bundle de producción.
+compatibility: angular
+metadata:
+  category: angular-deploy-safety
+  framework: angular
 ---
 
 # Angular Deploy Safety
