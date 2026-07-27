@@ -20,7 +20,7 @@ cada pilar:
 | Orientación | **AGENTS.md** | Instrucciones de proyecto que lee cualquier agente |
 | Memoria | **MCP** | Memoria persistente (Engram) accesible desde cualquier agente |
 
-El **núcleo** (skills, personas, AGENTS.md) es idéntico en todos lados. Lo único
+El **núcleo** (skills, agents, AGENTS.md) es idéntico en todos lados. Lo único
 específico de cada agente es **dónde va cada archivo** — eso vive en una capa
 fina de adaptadores dentro de `install.sh`.
 
@@ -51,16 +51,17 @@ fina de adaptadores dentro de `install.sh`.
 │   └── domains/                   # opt-in, nunca se auto-cargan por stack
 │       ├── conversion-ui/
 │       └── next-partial-prefetching-adoption/
-├── personas/                     # roles: quién hace qué con las skills de arriba
-│   ├── frontend-architect.md     # orquestador: decide stack, delega, abre specs
-│   ├── frontend-angular-senior.md
-│   ├── frontend-react-next.md
-│   └── project-owner.md          # scoping de producto, previo a cualquier decisión técnica
 ├── commands/fea/                 # slash-commands (/fea:*): mecanizan el flujo de OpenSpec
 │   ├── plan.md · execute.md · test.md · verify.md · archive.md
 │   └── fix.md · explore.md · audit.md
-├── agents/                       # subagentes livianos que usan los comandos de arriba
-│   └── code-writer.md · code-auditor.md · test-generator.md
+├── agents/                       # roles + subagentes: quién hace qué con las skills de arriba
+│   ├── project-owner.md          # rol: scoping de producto, previo a cualquier decisión técnica
+│   ├── frontend-architect.md     # rol: orquestador, decide stack, delega, abre specs
+│   ├── frontend-angular-senior.md    # rol: especialista de ejecución Angular
+│   ├── frontend-react-next.md        # rol: especialista de ejecución React/Next
+│   ├── code-writer.md            # subagente: implementa una task (usa /fea:execute, /fea:fix)
+│   ├── code-auditor.md           # subagente: audita contra las skills de calidad
+│   └── test-generator.md         # subagente: genera tests (usa /fea:test)
 └── install.sh                    # instalador: detecta stack + agente, orquesta motores
 ```
 
@@ -72,9 +73,12 @@ referencia deja abiertas: carpetas, estado, testing — esa sí es tu criterio).
 está por encima de las tres: agnósticas de framework, las citan las tres
 arquitecturas en vez de repetir contenido.
 
-## Personas: quién usa las skills
+## Agentes: quién usa las skills
 
-Las skills son el *qué*; las personas son el *quién* y en qué orden:
+Las skills son el *qué*; los agentes son el *quién* y en qué orden. `agents/`
+mezcla a propósito dos tipos: roles conversacionales (los primeros 3 puntos,
+pensados para sostener una sesión completa) y subagentes mecánicos (el 4to
+punto, invocados por task desde `commands/fea/`):
 
 1. **`project-owner`** — antes de cualquier decisión técnica, convierte una
    idea en `docs/project-context.md` (producto, MVP, reglas de negocio). No
@@ -87,6 +91,11 @@ Las skills son el *qué*; las personas son el *quién* y en qué orden:
 3. **`frontend-angular-senior`** / **`frontend-react-next`** — especialistas
    de ejecución. Implementan apoyándose en las skills del framework
    correspondiente; no reinventan el criterio que esas skills ya fijan.
+4. **`code-writer`** / **`code-auditor`** / **`test-generator`** — subagentes
+   que usa `/fea:execute`/`/fea:fix`/`/fea:test` por cada task: implementan,
+   auditan contra las mismas skills de calidad, y generan tests después de
+   implementar. No se invocan directo — son la capa mecánica detrás de los
+   comandos.
 
 `docs/` (contexto de producto) y `openspec/` (specs técnicas) son carpetas
 distintas con dueños distintos — no se mezclan.
@@ -107,19 +116,20 @@ instalador también los detecta y te ofrece instalarlos si faltan.
 ```
 
 El instalador detecta el framework por `package.json` e instala solo las skills
-relevantes (`core` + framework), coloca skills y personas en el dir global del
+relevantes (`core` + framework), coloca skills y agentes en el dir global del
 agente (viajan con vos, no ensucian el repo), inyecta tus estándares en
 `AGENTS.md` como bloque idempotente, y orquesta `openspec init` y
 `engram setup` para que cada uno haga su propio wiring por-agente.
 
 ## Dos destinos, una regla
 
-- **Global** (`~/.<agente>/skills/`, `~/.<agente>/commands/`,
-  `~/.<agente>/agents/`, memoria de Engram): tuyo, viaja con vos, no se
-  commitea al repo del cliente. Tu IP no queda regada en repos ajenos. Los
-  comandos `/fea:*` y los subagentes que usan (`code-writer`, `code-auditor`,
-  `test-generator`) son nativos de Claude Code — en otros agentes,
-  `install.sh` los instala en el mejor esfuerzo y avisa si no hay destino
+- **Global** (`~/.<agente>/skills/`, `~/.<agente>/agents/`,
+  `~/.<agente>/commands/`, memoria de Engram): tuyo, viaja con vos, no se
+  commitea al repo del cliente. Tu IP no queda regada en repos ajenos.
+  `agents/` (los 4 roles + los 3 subagentes) tiene destino garantizado en los
+  4 agentes soportados, igual que `skills/`. Los comandos `/fea:*` sí son
+  nativos de Claude Code sin equivalente conocido en el resto — ahí
+  `install.sh` instala en el mejor esfuerzo y avisa si no hay destino
   conocido, sin bloquear el resto.
 - **Proyecto** (`AGENTS.md`, `openspec/`): conocimiento de ese producto, se
   commitea y viaja con el repo.
@@ -152,5 +162,5 @@ agente (viajan con vos, no ensucian el repo), inyecta tus estándares en
 - [ ] `core/performance-budget` — presupuesto de bundle/Lighthouse como skill
       propia (hoy vive disperso entre `vercel-react-best-practices` y
       `ui-visual-craft`)
-- [ ] `vue/` — sin skills todavía; la persona de Vue se sacó hasta que exista
+- [ ] `vue/` — sin skills todavía; el agente de Vue se sacó hasta que exista
       esta base (mismo patrón referencia + arquitectura que los otros tres)

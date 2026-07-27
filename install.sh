@@ -8,10 +8,11 @@
 #   3. Chequea los MOTORES (OpenSpec, Engram). Si falta alguno, te dice cuál y
 #      OFRECE instalarlo con el comando correcto para tu SO (no instala a la fuerza)
 #   4. Instala las SKILLS relevantes: core/ (siempre) + la del framework detectado,
-#      más los comandos /fea:* y sus subagentes (best-effort, no bloqueante)
+#      más agents/ (roles + subagentes, destino garantizado) y los comandos
+#      /fea:* (best-effort, no bloqueante)
 #   5. Orquesta OpenSpec y Engram (que hacen su propio wiring por-agente)
 #
-# Núcleo portable (idéntico en todo agente): skills, personas, bloque de AGENTS.md.
+# Núcleo portable (idéntico en todo agente): skills, agents (roles + subagentes), bloque de AGENTS.md.
 # Capa de adaptadores (lo único agent-specific): DÓNDE va cada cosa.
 #
 # Uso:
@@ -87,11 +88,11 @@ skills_dir_for() {
     opencode) echo "$HOME/.config/opencode/skills" ;;    # verificar según tu versión
   esac
 }
-# commands/ y agents/ son best-effort: a diferencia de skills_dir_for() (que
-# es el requisito núcleo y hace exit 1 si no hay match), estas dos pueden
-# devolver "" — el custom-commands / subagents no es parte de los 3
-# estándares abiertos del proyecto (Agent Skills, AGENTS.md, MCP), es nativo
-# de Claude Code. Si devuelven vacío, copy_optional_dir() avisa y sigue.
+# commands/ es best-effort: a diferencia de skills_dir_for() (que es el
+# requisito núcleo y hace exit 1 si no hay match), esta puede devolver "" —
+# el custom-slash-command no es parte de los 3 estándares abiertos del
+# proyecto (Agent Skills, AGENTS.md, MCP), es nativo de Claude Code. Si
+# devuelve vacío, copy_optional_dir() avisa y sigue.
 commands_dir_for() {
   case "$1" in
     claude)   echo "$HOME/.claude/commands" ;;
@@ -100,12 +101,18 @@ commands_dir_for() {
     opencode) echo "$HOME/.config/opencode/command" ;;   # verificar según tu versión
   esac
 }
+# agents/ SÍ tiene destino garantizado para los 4 agentes (mismo criterio que
+# skills_dir_for() — antes esto lo cubría la copia especial de personas/ a
+# $SKILLS_DIR/_personas; ahora agents/ incluye esos roles y asume esa
+# garantía directamente). En claude, además, esta ruta es la carpeta nativa
+# de subagentes (Task tool). En los demás, es "mejor esfuerzo con ruta real":
+# el archivo llega, aunque el agente no lo invoque nativamente como subagente.
 agents_dir_for() {
   case "$1" in
     claude)   echo "$HOME/.claude/agents" ;;
-    cursor)   echo "" ;;                                  # sin subagentes custom conocidos
-    codex)    echo "" ;;                                  # sin subagentes custom conocidos
-    opencode) echo "" ;;                                  # verificar según tu versión
+    cursor)   echo "$PROJECT_DIR/.cursor/agents" ;;       # verificar soporte nativo de subagents
+    codex)    echo "$HOME/.codex/agents" ;;               # sin subagents nativos conocidos — carpeta de referencia
+    opencode) echo "$HOME/.config/opencode/agent" ;;      # verificar según tu versión
   esac
 }
 # Nombre que espera 'engram setup <agente>'
@@ -158,7 +165,7 @@ ensure_engram() {
 }
 
 # ---------------------------------------------------------------------------
-# 4. Instalar skills según stack + personas
+# 4. Instalar skills según stack + agents/ + commands/
 # ---------------------------------------------------------------------------
 copy_skill_group() {  # $1 = subcarpeta de skills/ ; $2 = dir destino
   local src="$ARCH_DIR/skills/$1"
@@ -264,8 +271,8 @@ step "Chequeando motores…"
 ensure_openspec
 ensure_engram
 
-# --- Skills (core + framework) + personas ---
-step "Instalando skills y personas…"
+# --- Skills (core + framework) + agents/ + commands/ ---
+step "Instalando skills, agentes y comandos…"
 copy_skill_group "core" "$SKILLS_DIR"
 for fw in "${FRAMEWORKS[@]}"; do copy_skill_group "$fw" "$SKILLS_DIR"; done
 # domains: opt-in explícito (NO se autocargan por stack)
@@ -275,13 +282,9 @@ elif [[ -n "$(list_domains)" ]]; then
   log "domains disponibles (opt-in): $(list_domains | tr '\n' ' ')"
   log "  → incluí con --with <nombre> (ej: --with conversion-ui)"
 fi
-if [[ -d "$ARCH_DIR/personas" ]]; then
-  run "mkdir -p '$SKILLS_DIR/_personas'"
-  run "cp -R '$ARCH_DIR/personas/.' '$SKILLS_DIR/_personas/'"
-  ok "personas instaladas"
-fi
-# comandos /fea:* y sus subagentes: best-effort, nunca bloquean el install
+# comandos /fea:*: best-effort, nunca bloquean el install (ver commands_dir_for)
 copy_optional_dir "$ARCH_DIR/commands" "$(commands_dir_for "$AGENT")" "comandos /fea:*"
+# agents/ (roles + subagentes mecánicos): destino garantizado, igual que skills
 copy_optional_dir "$ARCH_DIR/agents"   "$(agents_dir_for "$AGENT")"   "agentes"
 
 # --- AGENTS.md canónico (mis estándares, como bloque) ---
@@ -325,7 +328,7 @@ if [[ "$AGENT" == "claude" && $DRY_RUN -eq 0 ]]; then
 fi
 
 step "Listo."
-log "Núcleo portable: skills (core${FRAMEWORKS:+ + ${FRAMEWORKS[*]}}) + personas + bloque AGENTS.md."
+log "Núcleo portable: skills (core${FRAMEWORKS:+ + ${FRAMEWORKS[*]}}) + agentes (roles + subagentes) + bloque AGENTS.md."
 [[ ${#DOMAINS[@]} -gt 0 ]] && log "Domains opt-in instalados: ${DOMAINS[*]}."
 log "Solo cambiaron las rutas según el agente — eso es la capa de adaptadores."
 [[ $DRY_RUN -eq 1 ]] && log "(fue un dry-run: no se tocó nada)"
