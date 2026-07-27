@@ -8,7 +8,8 @@ This is **not** an application — it's "Frontend AI Ecosystem" (Wordflow), a
 portable layer of order, memory, skills, and working method that gets
 installed *on top of* other projects and other AI agents (Claude Code, Cursor,
 Codex, OpenCode). There is no build, lint, or test command: the deliverable is
-Markdown (`SKILL.md` files, personas, `AGENTS.md`) plus one bash installer.
+Markdown (`SKILL.md` files, personas, custom commands, subagents, `AGENTS.md`)
+plus one bash installer.
 
 Read `README.md` and `AGENTS.md` at the repo root first — they are the
 canonical explanation of the project's purpose and are written in Spanish
@@ -42,6 +43,12 @@ skills/
     conversion-ui/
     next-partial-prefetching-adoption/  # vendored from vercel/next.js canary skills
 personas/               # roles that use the skills above (see "Personas" section)
+commands/
+  fea/                  # Claude Code custom slash-commands, namespace /fea:*
+                        # (plan, execute, test, verify, archive, fix, explore, audit)
+                        # — see "commands/ and agents/" section
+agents/                 # lightweight subagents the commands/ delegate to
+                        # (code-writer, code-auditor, test-generator)
 install.sh              # the only executable logic in the repo
 ```
 
@@ -169,6 +176,36 @@ specs, owned by `frontend-architect`) are conventions for the *target*
 project a persona works in — this repo itself has neither folder and
 shouldn't grow one from unrelated work.
 
+## commands/ and agents/ — mechanizing the OpenSpec flow
+
+`personas/frontend-architect.md` used to describe the OpenSpec propose/apply/
+archive flow in prose. `commands/fea/*.md` now mechanizes it as Claude Code
+custom slash-commands (namespace `/fea:*`, one per lifecycle step — `plan`,
+`execute`, `test`, `verify`, `archive`, `fix`, `explore`, `audit`) and
+`frontend-architect.md` cites them instead of re-describing the steps. Same
+"cite, don't reimplement" rule that already governs skills applies here.
+
+`agents/*.md` are the lightweight subagents `commands/fea/execute.md` and
+`fix.md` delegate to per task: `code-writer` (implements), `code-auditor`
+(reviews against `frontend-clean-code`/`frontend-design-principles`/
+`accessibility-a11y`/the detected framework's architecture skill, runs lint,
+returns a verdict), `test-generator` (writes tests after implementation, from
+the spec's WHEN/THEN + the real code's signatures). They are a third
+component parallel to `skills/` and `personas/` — narrower in scope than a
+persona (one mechanical job, not a role) and meant to be invoked by the
+`commands/`, not directly by a person.
+
+**Important caveat:** unlike skills (Agent Skills, an open standard this repo
+is built on — see `README.md`), custom slash-commands and subagents are a
+Claude Code-native mechanism, not one of this project's three open standards.
+Cursor/Codex/OpenCode may have no equivalent. `install.sh` treats
+`commands/`/`agents/` as a best-effort, non-blocking install (see
+`commands_dir_for()`/`agents_dir_for()` below) — if the detected agent has no
+known destination, it warns and skips instead of failing. The content still
+works as plain reference material for any agent that reads it, even without
+native slash-command/subagent support — it just won't be invoked via
+`/fea:plan` syntax.
+
 ## install.sh
 
 The installer equips a *target* project (elsewhere on disk) with this
@@ -177,25 +214,29 @@ ecosystem. Reading it top to bottom explains the whole install flow:
 1. Detects package manager (`pnpm-lock.yaml`/`yarn.lock`/`bun.lockb`/default npm) and framework from the target's `package.json`: `@angular/core` → angular; `next` → next; else `react` → react. Next wins over react when both are present (a Next app always depends on `react` too, but `next-conventions` explicitly says not to load `react/` alongside it — see `has_dep` branching in the "Stack" section of the script).
 2. Detects which AI agent binary is installed (`claude`, `cursor`, `codex`, `opencode`); prompts if 0 or 2+ found.
 3. Checks for the two external "engines" this ecosystem depends on — OpenSpec (spec-driven dev workflow) and Engram (persistent memory via MCP) — and offers (never forces) to install missing ones.
-4. Copies `skills/core/` + the detected framework's skill dir (including its vendored reference and any nested `references/` files, since it copies the whole subtree) + `personas/` into the agent's own global skills directory (e.g. `~/.claude/skills`) — never into the target repo.
+4. Copies `skills/core/` + the detected framework's skill dir (including its vendored reference and any nested `references/` files, since it copies the whole subtree) + `personas/` into the agent's own global skills directory (e.g. `~/.claude/skills`) — never into the target repo. Then copies `commands/` and `agents/` into the agent's own commands/subagents directories (e.g. `~/.claude/commands`, `~/.claude/agents`) via `copy_optional_dir()` — unlike the skills copy, this step is non-blocking: if `commands_dir_for()`/`agents_dir_for()` return empty for the detected agent (no known native support), it warns and moves on instead of failing.
 5. Injects the `AGENTS.md` content into the target project's `AGENTS.md` as an idempotent `<!-- FEA:START -->...<!-- FEA:END -->` block, then runs `openspec init --tools "$AGENT"` (first run) or `openspec update` (if `openspec/` already exists — avoids re-running `init --force` over real specs) and `engram setup <agent>`. OpenSpec's tool IDs are identical to this script's own `$AGENT` values, so no mapping function is needed there (unlike `engram_agent_arg()`).
 
 Key flags: `--project <path>`, `--agent <name>`, `--yes`, `--dry-run`, `--with <domain1,domain2>`.
 
-The agent-specific logic is confined to two small lookup functions —
-`skills_dir_for()` and `engram_agent_arg()` — everything else is
-agent-agnostic. When adding support for a new agent, that's where to start.
-Personas are copied wholesale regardless of detected framework (an Angular
-project still gets `frontend-react-next.md` sitting unused) — this is
-intentional simplicity, not a bug; don't "fix" it by filtering personas per
-stack without being asked.
+The agent-specific logic is confined to four small lookup functions —
+`skills_dir_for()`, `commands_dir_for()`, `agents_dir_for()`, and
+`engram_agent_arg()` — everything else is agent-agnostic. When adding support
+for a new agent, that's where to start. `skills_dir_for()` is the one hard
+requirement (`exit 1` if unsupported); the other two dir-lookup functions are
+best-effort (see "commands/ and agents/" above) — an agent unsupported there
+still gets the full skills+personas install. Personas are copied wholesale
+regardless of detected framework (an Angular project still gets
+`frontend-react-next.md` sitting unused) — this is intentional simplicity,
+not a bug; don't "fix" it by filtering personas per stack without being
+asked.
 
 ## Two-destination rule
 
-- **Global** (agent's own skills dir, Engram memory): travels with the person, never committed to a client's repo.
+- **Global** (agent's own skills dir, commands dir, agents dir, Engram memory): travels with the person, never committed to a client's repo. `commands/` and `agents/` follow this bucket exactly like `skills/`/`personas/` — see "commands/ and agents/" above.
 - **Project** (`AGENTS.md`, `openspec/`, `docs/` inside the target repo): product and technical knowledge specific to that project, committed and travels with that repo.
 
-Don't conflate the two when editing `install.sh` or adding new skills/personas.
+Don't conflate the two when editing `install.sh` or adding new skills/personas/commands/agents.
 
 **Deliberate exception:** files that `openspec init` generates inside the
 *target* repo (`.claude/skills/openspec-*/SKILL.md`, `.claude/commands/opsx/*.md`,

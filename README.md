@@ -56,6 +56,11 @@ fina de adaptadores dentro de `install.sh`.
 │   ├── frontend-angular-senior.md
 │   ├── frontend-react-next.md
 │   └── project-owner.md          # scoping de producto, previo a cualquier decisión técnica
+├── commands/fea/                 # slash-commands (/fea:*): mecanizan el flujo de OpenSpec
+│   ├── plan.md · execute.md · test.md · verify.md · archive.md
+│   └── fix.md · explore.md · audit.md
+├── agents/                       # subagentes livianos que usan los comandos de arriba
+│   └── code-writer.md · code-auditor.md · test-generator.md
 └── install.sh                    # instalador: detecta stack + agente, orquesta motores
 ```
 
@@ -76,7 +81,9 @@ Las skills son el *qué*; las personas son el *quién* y en qué orden:
    toca código ni arquitectura.
 2. **`frontend-architect`** — lee ese contexto si existe, detecta o decide el
    stack, y para cambios no triviales abre una propuesta en `openspec/` antes
-   de delegar. No implementa directamente.
+   de delegar — hoy ese flujo lo mecanizan los comandos `/fea:plan` →
+   `/fea:execute` → `/fea:verify` → `/fea:archive` (`commands/fea/`). No
+   implementa directamente.
 3. **`frontend-angular-senior`** / **`frontend-react-next`** — especialistas
    de ejecución. Implementan apoyándose en las skills del framework
    correspondiente; no reinventan el criterio que esas skills ya fijan.
@@ -107,8 +114,13 @@ agente (viajan con vos, no ensucian el repo), inyecta tus estándares en
 
 ## Dos destinos, una regla
 
-- **Global** (`~/.<agente>/skills/`, memoria de Engram): tuyo, viaja con vos,
-  no se commitea al repo del cliente. Tu IP no queda regada en repos ajenos.
+- **Global** (`~/.<agente>/skills/`, `~/.<agente>/commands/`,
+  `~/.<agente>/agents/`, memoria de Engram): tuyo, viaja con vos, no se
+  commitea al repo del cliente. Tu IP no queda regada en repos ajenos. Los
+  comandos `/fea:*` y los subagentes que usan (`code-writer`, `code-auditor`,
+  `test-generator`) son nativos de Claude Code — en otros agentes,
+  `install.sh` los instala en el mejor esfuerzo y avisa si no hay destino
+  conocido, sin bloquear el resto.
 - **Proyecto** (`AGENTS.md`, `openspec/`): conocimiento de ese producto, se
   commitea y viaja con el repo.
 

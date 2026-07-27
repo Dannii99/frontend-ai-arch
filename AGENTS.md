@@ -10,13 +10,16 @@ Copilot y más de forma nativa; Claude Code lo importa vía `CLAUDE.md`).
 ## Cómo se trabaja aquí
 
 **Spec-Driven Development (OpenSpec).** Antes de escribir código, se acuerda el
-spec. Cambio no trivial: `/opsx:propose <nombre-del-cambio>` (o `openspec new
-change <nombre-del-cambio>` sin slash-commands disponibles) genera
+spec. Cambio no trivial: `/fea:plan <nombre-del-cambio>` genera
 `openspec/changes/<nombre-del-cambio>/` con `proposal.md`, `design.md`,
 `tasks.md` y el delta de `spec.md` — el código se implementa contra ese spec,
-no contra un prompt suelto. Al cerrar: `/opsx:apply` y `/opsx:archive` (o
-`openspec archive <nombre-del-cambio> -y`). Cambios chicos: implementar
-directo, sin propuesta.
+no contra un prompt suelto. Implementación: `/fea:execute` (delega por task a
+un loop `code-writer` → `code-auditor`). Antes de cerrar: `/fea:verify`. Al
+cerrar: `/fea:archive`. Estos comandos viven en `commands/fea/` y se instalan
+globales junto con las skills — son nativos de Claude Code; si tu agente no
+los soporta, usá el CLI directo (`openspec new change <nombre-del-cambio>`,
+`openspec instructions <artifact> --json`, `openspec archive
+<nombre-del-cambio> -y`). Cambios chicos: implementar directo, sin propuesta.
 
 **Contexto de producto antes que arquitectura.** Si existe
 `docs/project-context.md` (objetivo, MVP, reglas de negocio en lenguaje

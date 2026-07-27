@@ -7,7 +7,8 @@
 #   2. Detecta el AGENTE de IA (si hay 0 o varios, pregunta; si hay 1, sigue)
 #   3. Chequea los MOTORES (OpenSpec, Engram). Si falta alguno, te dice cuál y
 #      OFRECE instalarlo con el comando correcto para tu SO (no instala a la fuerza)
-#   4. Instala las SKILLS relevantes: core/ (siempre) + la del framework detectado
+#   4. Instala las SKILLS relevantes: core/ (siempre) + la del framework detectado,
+#      más los comandos /fea:* y sus subagentes (best-effort, no bloqueante)
 #   5. Orquesta OpenSpec y Engram (que hacen su propio wiring por-agente)
 #
 # Núcleo portable (idéntico en todo agente): skills, personas, bloque de AGENTS.md.
@@ -86,6 +87,27 @@ skills_dir_for() {
     opencode) echo "$HOME/.config/opencode/skills" ;;    # verificar según tu versión
   esac
 }
+# commands/ y agents/ son best-effort: a diferencia de skills_dir_for() (que
+# es el requisito núcleo y hace exit 1 si no hay match), estas dos pueden
+# devolver "" — el custom-commands / subagents no es parte de los 3
+# estándares abiertos del proyecto (Agent Skills, AGENTS.md, MCP), es nativo
+# de Claude Code. Si devuelven vacío, copy_optional_dir() avisa y sigue.
+commands_dir_for() {
+  case "$1" in
+    claude)   echo "$HOME/.claude/commands" ;;
+    cursor)   echo "$HOME/.cursor/commands" ;;           # verificar soporte de custom commands
+    codex)    echo "" ;;                                  # sin comandos custom conocidos
+    opencode) echo "$HOME/.config/opencode/command" ;;   # verificar según tu versión
+  esac
+}
+agents_dir_for() {
+  case "$1" in
+    claude)   echo "$HOME/.claude/agents" ;;
+    cursor)   echo "" ;;                                  # sin subagentes custom conocidos
+    codex)    echo "" ;;                                  # sin subagentes custom conocidos
+    opencode) echo "" ;;                                  # verificar según tu versión
+  esac
+}
 # Nombre que espera 'engram setup <agente>'
 engram_agent_arg() { case "$1" in claude) echo "claude-code" ;; *) echo "$1" ;; esac; }
 # OpenSpec NO necesita una función equivalente: sus tool IDs (--tools) son
@@ -148,6 +170,18 @@ copy_skill_group() {  # $1 = subcarpeta de skills/ ; $2 = dir destino
   run "mkdir -p '$2'"
   run "cp -R '$src/.' '$2/'"
   ok "skills '$1' instaladas"
+}
+
+copy_optional_dir() {  # $1 = dir origen ; $2 = dir destino (puede ser "") ; $3 = etiqueta para el log
+  local src="$1" dst="$2" label="$3"
+  [[ -d "$src" ]] || return 0
+  if [[ -z "$dst" ]]; then
+    warn "$label: sin destino conocido para '$AGENT' — se omite (podés seguir el flujo igual, ver $src/*.md como referencia)"
+    return 0
+  fi
+  run "mkdir -p '$dst'"
+  run "cp -R '$src/.' '$dst/'"
+  ok "$label instalados"
 }
 
 list_domains() {  # nombres de domains disponibles (portable, sin xargs)
@@ -246,6 +280,9 @@ if [[ -d "$ARCH_DIR/personas" ]]; then
   run "cp -R '$ARCH_DIR/personas/.' '$SKILLS_DIR/_personas/'"
   ok "personas instaladas"
 fi
+# comandos /fea:* y sus subagentes: best-effort, nunca bloquean el install
+copy_optional_dir "$ARCH_DIR/commands" "$(commands_dir_for "$AGENT")" "comandos /fea:*"
+copy_optional_dir "$ARCH_DIR/agents"   "$(agents_dir_for "$AGENT")"   "agentes"
 
 # --- AGENTS.md canónico (mis estándares, como bloque) ---
 step "Escribiendo estándares en el proyecto…"

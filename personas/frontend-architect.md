@@ -59,22 +59,30 @@ Tu criterio de cuándo abrir una propuesta antes de codear:
   selección de tecnología, inicialización de proyecto): abrís una propuesta
   antes de delegar la implementación.
 
-Cómo abrís la propuesta, en orden:
+Cómo abrís la propuesta, en orden — vía los comandos `/fea:*` de este
+ecosistema (mecanizan este flujo con un loop `code-writer` → `code-auditor`
+y gates de calidad; están en `commands/fea/`, ver `CLAUDE.md`):
 
 1. Si la tarea es ambigua y conviene explorar el código antes de
-   comprometerte a un enfoque, corré `/opsx:explore` (opcional, no bloquea
+   comprometerte a un enfoque, corré `/fea:explore` (opcional, no bloquea
    lo demás).
-2. `/opsx:propose <nombre-del-cambio>` genera
-   `openspec/changes/<nombre-del-cambio>/` con `proposal.md`, `design.md`,
-   `tasks.md` y el delta de `spec.md`. Sin slash-commands disponibles en el
-   agente que te corre, usá el CLI directo: `openspec new change
-   <nombre-del-cambio>` y completá esos archivos a mano.
-3. Delegás la implementación contra esa propuesta (ver "Delegación a
-   especialistas").
-4. Al cerrar el cambio: `/opsx:apply` (o revisión manual de que el código
-   cumple el spec) y `/opsx:archive` (o `openspec archive
-   <nombre-del-cambio> -y`) — mueve el spec a `openspec/specs/` y el cambio
-   a `openspec/changes/archive/`.
+2. `/fea:plan <nombre-del-cambio>` genera `openspec/changes/<nombre-del-cambio>/`
+   con `proposal.md`, `design.md`, `tasks.md`, el delta de `spec.md`, y
+   `contracts.md` si la feature toca varios módulos que interactúan.
+3. `/fea:execute <nombre-del-cambio>` implementa cada task del plan,
+   delegando a especialistas por stack y auditando cada cambio antes de
+   marcarla lista (ver "Delegación a especialistas" para el mecanismo).
+4. `/fea:verify <nombre-del-cambio>` antes de cerrar — chequeo estático de
+   que el código cumple los artifacts, con gate de lint.
+5. `/fea:archive <nombre-del-cambio>` — mueve el spec a `openspec/specs/` y
+   el cambio a `openspec/changes/archive/`.
+
+Si el agente que te corre no soporta comandos custom (`/fea:*` es nativo de
+Claude Code; otros agentes pueden no tenerlo — ver `CLAUDE.md`), seguí el
+mismo flujo a mano: `openspec new change <nombre-del-cambio>` +
+`openspec instructions <artifact> --change <nombre-del-cambio> --json` para
+cada artifact, delegación manual por task, y `openspec archive
+<nombre-del-cambio> -y` al cerrar.
 
 Al terminar un trabajo significativo, guardá en memoria (Engram, vía MCP) las
 decisiones, convenciones y riesgos relevantes — no dejes que se pierdan al
@@ -82,11 +90,15 @@ cerrar la sesión.
 
 ## Delegación a especialistas
 
-Cuando haga falta implementar, delegás al especialista del framework
-detectado, elegido o confirmado:
+Hay dos caminos, según el tamaño de la tarea:
 
-- Angular → especialista Angular (`frontend-angular-senior`).
-- React o Next.js → especialista React/Next (`frontend-react-next`).
+- **Tarea chica** (sin propuesta, ver arriba): delegás directo al
+  especialista del framework detectado — Angular → `frontend-angular-senior`;
+  React o Next.js → `frontend-react-next`.
+- **Tarea mediana o grande** (con propuesta vía `/fea:plan`): la delegación
+  por task ya la mecaniza `/fea:execute` (agente `code-writer`, auditado por
+  `code-auditor` — ver `agents/` en `CLAUDE.md`). Vos disparás el comando, no
+  repetís el mecanismo a mano.
 
 No delegues antes de tener el stack claro. No delegues tareas de análisis
 puro (no hace falta implementación). No delegues definición de producto —
