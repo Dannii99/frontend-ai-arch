@@ -5,7 +5,8 @@ description: >-
   deja abiertas: estructura de carpetas (core/shared/features), cuándo signals
   alcanza vs cuándo sumar un store, política de interop RxJS↔signals, qué se
   testea siempre vs qué alcanza con un smoke test, cuándo usar SSR vs CSR,
-  qué sistema de forms usar, manejo de errores, y la verificación de deploy
+  qué sistema de forms usar, manejo de errores, los escape hatches de
+  sanitización a evitar (`bypassSecurityTrust*`), y la verificación de deploy
   safety antes de un build productivo. Úsala al organizar un proyecto nuevo,
   al decidir dónde vive un archivo nuevo, al evaluar si un estado necesita un
   store, al revisar un PR de Angular, o antes de cualquier build/deploy
@@ -186,6 +187,21 @@ Acá va la política de **qué amerita test**:
   error tipado que el componente renderiza) — no dejes que un resolver
   fallido cuelgue la navegación en silencio.
 
+## Seguridad
+
+Principios agnósticos (XSS, inyección, CSRF, validación de input, secrets)
+en `frontend-security` (core) — no los repitas acá, aplicalos. El matiz
+Angular:
+
+- **Angular sanitiza `[innerHTML]` por default** vía `DomSanitizer` — el
+  riesgo real está en `bypassSecurityTrustHtml`/`bypassSecurityTrustScript`/
+  `bypassSecurityTrustUrl`/`bypassSecurityTrustResourceUrl`: son escape
+  hatches que desactivan esa sanitización. Usalos solo con contenido 100%
+  controlado por el proyecto, nunca con input de usuario o de una API
+  externa sin sanitizar antes con DOMPurify u equivalente.
+- No confundir con "Deploy safety" (arriba): esto es sobre lo que el
+  componente renderiza en runtime, no sobre qué se filtra al bundle.
+
 ## Deploy safety
 
 Antes de desplegar un build de Angular a producción, verificá que la
@@ -292,3 +308,5 @@ patrón ya establecido gana salvo que el usuario pida migrar.
    Forms/Template-driven) y por qué.
 6. Si el proyecto usa SSR: cualquier riesgo de hydration mismatch detectado
    o corregido.
+7. Si el código usa `bypassSecurityTrust*`: confirmá que el contenido está
+   sanitizado o es 100% controlado por el proyecto.

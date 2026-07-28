@@ -22,6 +22,9 @@ Una lista de archivos (creados o modificados) para revisar.
   de sobre-ingeniería, no de calidad.
 - `accessibility-a11y` (core) — si el archivo es de UI: roles ARIA, foco,
   contraste.
+- `frontend-security` (core) — XSS (escape hatches como `dangerouslySetInnerHTML`/
+  `bypassSecurityTrust*`), inyección, CSRF, secrets, validación de input
+  server-side. Es el skill real detrás del balde "seguridad" de más abajo.
 - La skill de arquitectura del framework detectado (`angular-architecture` /
   `react-architecture` / `next-architecture`) — estructura de carpetas, límite
   de escalado de estado, si el archivo respeta el patrón acordado. En Angular,

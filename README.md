@@ -6,8 +6,9 @@ que se instala sobre **cualquier agente de IA** (Claude Code, Cursor, Codex,
 OpenCode…) y sobre cualquier proyecto, nuevo o existente.
 
 La idea: que el agente cargue el criterio senior de frontend —accesibilidad,
-testing, performance, seguridad de deploy— para que el output sea consistente y
-con estándares, incluso cuando quien lo conduce no es experto en frontend.
+testing, performance, seguridad de aplicación (XSS, CSRF, secrets) y seguridad
+de deploy— para que el output sea consistente y con estándares, incluso
+cuando quien lo conduce no es experto en frontend.
 
 ## Por qué es agent-agnóstico de verdad
 
@@ -35,6 +36,7 @@ fina de adaptadores dentro de `install.sh`.
 │   │   ├── accessibility-a11y/
 │   │   ├── frontend-clean-code/          # calidad micro: nombres, tipos, funciones
 │   │   ├── frontend-design-principles/   # SOLID + patrones (Facade, Repository, Adapter)
+│   │   ├── frontend-security/            # XSS, inyección, CSRF, secrets, validación de input
 │   │   ├── ui-visual-craft/
 │   │   ├── motion-design-system/
 │   │   └── documentation-writer/
@@ -159,6 +161,8 @@ wiring por-agente.
 - [x] `core/accessibility-a11y` — principios de accesibilidad (qué revisar)
 - [x] `core/frontend-clean-code`, `core/frontend-design-principles` — calidad
       micro + SOLID/patrones
+- [x] `core/frontend-security` — XSS, inyección, CSRF, secrets, validación de
+      input (seguridad de aplicación, no de deploy)
 - [x] `core/ui-visual-craft`, `core/motion-design-system`,
       `core/documentation-writer`
 - [x] `angular/` — `angular-architecture` (incluye deploy safety) +

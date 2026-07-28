@@ -5,8 +5,9 @@ description: >-
   estructura de carpetas (core/shared/features), routing y code-splitting,
   el límite entre estado de servidor (TanStack Query/SWR) y estado de cliente
   (useState/Context/store), cuándo escalar a Zustand/Jotai, memoización manual
-  vs React Compiler, qué librería de forms usar, error boundaries, y qué se
-  testea siempre vs qué alcanza con un smoke test. Úsala al organizar un
+  vs React Compiler, qué librería de forms usar, error boundaries, el escape
+  hatch de sanitización a evitar (`dangerouslySetInnerHTML`), y qué se testea
+  siempre vs qué alcanza con un smoke test. Úsala al organizar un
   proyecto React puro (Vite/CRA/Remix, sin Next), al decidir dónde vive un
   archivo nuevo, al evaluar si un dato necesita un query client o un store, o
   al revisar un PR de React. No es referencia de performance (ver
@@ -164,6 +165,19 @@ el modelo; acá va la política de **qué amerita test**:
 - **Mocks solo en los límites externos** (HTTP vía MSW, storage). Nunca
   mockees un hook o componente propio para testear otro propio.
 
+## Seguridad
+
+Principios agnósticos (XSS, inyección, CSRF, validación de input, secrets)
+en `frontend-security` (core) — no los repitas acá, aplicalos. El matiz
+React:
+
+- **JSX escapa por default** (`{valor}` nunca ejecuta HTML/JS) — el riesgo
+  real es `dangerouslySetInnerHTML`. Usalo solo con contenido sanitizado
+  explícitamente (DOMPurify u equivalente) o 100% controlado por el
+  proyecto, nunca con input de usuario o de una API externa sin sanitizar.
+- URLs dinámicas en `href`/`src` desde input de usuario: validá el esquema
+  antes de usarlas (bloqueá `javascript:`).
+
 ## Manejo de errores
 
 React no trae un mecanismo built-in (a diferencia de `error.tsx` en Next) —
@@ -196,3 +210,5 @@ patrón ya establecido gana salvo que el usuario pida migrar.
 5. Si el cambio introdujo o tocó un form: qué librería usaste y por qué.
 6. Si agregaste o evitaste memoización manual, y si el proyecto tiene React
    Compiler habilitado.
+7. Si el código usa `dangerouslySetInnerHTML`: confirmá que el contenido
+   está sanitizado o es 100% controlado por el proyecto.

@@ -10,8 +10,8 @@ description: >-
   Úsala en cualquier tarea de Next para fijar los defaults correctos y evitar
   los errores típicos (client components async, props no serializables,
   try-catch sobre redirect, <img> en vez de next/image, secrets filtrados al
-  bundle del cliente). No la uses para React puro (Vite/CRA) — para eso está
-  react/.
+  bundle del cliente, confiar en validación solo del lado cliente). No la
+  uses para React puro (Vite/CRA) — para eso está react/.
 compatibility: next
 metadata:
   category: next-architecture
@@ -132,6 +132,22 @@ adaptado a cómo Next expone env vars al bundle:
 - Ante la duda de si un valor es sensible, tratalo como sensible: sin
   `NEXT_PUBLIC_`, acceso solo server-side.
 
+## Seguridad
+
+Principios agnósticos (XSS, inyección, CSRF, validación de input, secrets)
+en `frontend-security` (core) — no los repitas acá, aplicalos. El matiz
+Next:
+
+- **JSX escapa por default** (Next ya es React) — el riesgo real sigue
+  siendo `dangerouslySetInnerHTML`, mismo criterio que `react-architecture`.
+- **Server Actions y Route Handlers son el boundary donde entra input no
+  confiable** — revalidá siempre del lado del server (ver "Validación de
+  input" en `frontend-security`), nunca confíes solo en la validación del
+  form del lado cliente.
+- Secrets: ver "Variables de entorno" (arriba) — `NEXT_PUBLIC_*` es
+  exactamente el mecanismo de filtrado al cliente que `frontend-security`
+  pide evitar.
+
 ## APIs async (v15+)
 
 - `params`, `searchParams`, `cookies()` y `headers()` son **asíncronas**:
@@ -239,3 +255,5 @@ está en `next-references`, esta skill solo la cita y decide un default.
    `unstable_cache`) y por qué.
 7. Si tocaste variables de entorno: confirmá que ninguna sensible quedó
    prefijada `NEXT_PUBLIC_`.
+8. Si agregaste una Server Action/Route Handler: confirmá que revalida el
+   input del lado server, no solo del lado cliente.

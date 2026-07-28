@@ -42,6 +42,11 @@ Siempre, además, sin importar cuál de los dos sea:
   código, SOLID, patrones cuando el módulo lo justifica.
 - `accessibility-a11y`, `ui-visual-craft`, `motion-design-system` (core) —
   cualquier trabajo de UI.
+- `frontend-security` (core) — cualquier código que renderice contenido
+  dinámico, reciba input, o maneje sesión (ver la sección "Seguridad" de
+  `react-architecture`/`next-architecture` para el matiz de cada uno:
+  `dangerouslySetInnerHTML`, validación server-side en Server Actions/Route
+  Handlers).
 
 No reimplementes acá el criterio que esas skills ya fijan — consultalas en
 vez de improvisar tu propia versión de "cómo se hace esto en React/Next".

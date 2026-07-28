@@ -39,6 +39,11 @@ ya está encapsulado en una skill.
 - **Accesibilidad (WCAG):** ARIA correcto, teclado, foco visible, contraste.
 - **Testing:** cobertura significativa; los tests fallan por la razón correcta.
 - **Performance:** respetar el budget de bundle y métricas de carga.
+- **Seguridad:** sin XSS, sin inyección, CSRF cubierto, validación de input
+  siempre revalidada del lado server, secrets fuera del cliente. Ver
+  `frontend-security` (core) y la sección "Seguridad" de la skill de
+  arquitectura del framework correspondiente. Distinto de deploy safety
+  (abajo): esto es runtime de la aplicación, no build.
 - **Deploy safety:** nada de dev (URLs locales, endpoints de staging, tokens,
   valores hardcodeados) se filtra al build de producción. Ver la sección de
   deploy safety dentro de la skill de arquitectura del framework

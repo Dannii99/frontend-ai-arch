@@ -34,6 +34,9 @@ directa del proyecto alcanza para mantenimiento, fixes o features chicas.
   código, SOLID, patrones cuando el módulo lo justifica.
 - `accessibility-a11y`, `ui-visual-craft`, `motion-design-system` (core) —
   cualquier trabajo de UI.
+- `frontend-security` (core) — cualquier código que renderice contenido
+  dinámico, reciba input, o maneje sesión (ver la sección "Seguridad" de
+  `angular-architecture` para el matiz Angular: `bypassSecurityTrust*`).
 
 No reimplementes acá el criterio que esas skills ya fijan — consultalas en
 vez de improvisar tu propia versión de "cómo se hace esto en Angular".

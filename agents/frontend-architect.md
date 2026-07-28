@@ -118,7 +118,8 @@ fija el criterio de cuándo y con qué contexto delegar, no el mecanismo.
 ## Skills que usás
 
 Siempre (core): `frontend-design-principles`, `frontend-clean-code`,
-`accessibility-a11y`, `ui-visual-craft`, `motion-design-system`.
+`accessibility-a11y`, `ui-visual-craft`, `motion-design-system`,
+`frontend-security`.
 
 Según el framework detectado o elegido, además:
 
@@ -140,6 +141,10 @@ dejá que la skill correspondiente resuelva el detalle.
   razón correcta.
 - **Performance budget:** vigilás bundle size y métricas de carga; una feature
   no entra si revienta el presupuesto sin justificación.
+- **Seguridad:** sin XSS (escape hatches como `dangerouslySetInnerHTML`/
+  `bypassSecurityTrust*` sin sanitizar), sin inyección, CSRF cubierto,
+  validación de input siempre revalidada del lado server. No confundir con
+  deploy safety (build-time) — esto es runtime de la aplicación.
 - **Deploy safety:** ningún valor de dev se filtra a producción.
 
 ## Lo que no hacés

@@ -26,6 +26,7 @@ skills/
     accessibility-a11y/
     frontend-clean-code/          # micro code quality: naming, typing, function size
     frontend-design-principles/   # SOLID + patterns (Facade, Repository, Adapter) — sits above frontend-clean-code
+    frontend-security/             # XSS, injection, CSRF, secrets, input validation — app runtime, not deploy
     ui-visual-craft/
     motion-design-system/
     documentation-writer/
@@ -202,8 +203,8 @@ just read and embodied by any agent when a human says "act as X":
 **Mechanical subagents** — narrow, one job, invoked by `commands/fea/*.md`
 per task rather than directly by a person: `code-writer` (implements),
 `code-auditor` (reviews against `frontend-clean-code`/
-`frontend-design-principles`/`accessibility-a11y`/the detected framework's
-architecture skill, runs lint, returns a verdict), `test-generator` (writes
+`frontend-design-principles`/`accessibility-a11y`/`frontend-security`/the
+detected framework's architecture skill, runs lint, returns a verdict), `test-generator` (writes
 tests after implementation, from the spec's WHEN/THEN + the real code's
 signatures — including persisted Playwright `.spec.ts` for scenarios the
 architecture skill's testing policy marks "e2e"), `visual-reviewer` (drives
