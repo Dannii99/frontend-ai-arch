@@ -34,7 +34,7 @@ disponibles.
      escenarios WHEN/THEN definen los casos a cubrir.
    - El código implementado — las firmas reales que los tests deben invocar.
    - La sección de testing de la skill de arquitectura del stack detectado
-     (`angular-architecture` / `react-architecture` / `next-conventions`):
+     (`angular-architecture` / `react-architecture` / `next-architecture`):
      ahí está definido qué siempre lleva test completo, qué smoke test, y qué
      queda para e2e.
    - La convención de ubicación de tests que ya usa el proyecto (colocados

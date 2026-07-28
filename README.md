@@ -39,15 +39,14 @@ fina de adaptadores dentro de `install.sh`.
 │   │   ├── motion-design-system/
 │   │   └── documentation-writer/
 │   ├── angular/                   # solo si el proyecto usa Angular
-│   │   ├── skills-main/           # vendored: angular/skills oficial (referencia dura)
-│   │   ├── angular-architecture/  # tu criterio: carpetas, estado, testing
-│   │   └── angular-deploy-safety/
+│   │   ├── angular-references/    # vendored: angular/skills oficial (referencia dura)
+│   │   └── angular-architecture/  # tu criterio: carpetas, estado, testing, deploy safety
 │   ├── react/                     # solo si el proyecto usa React puro (sin Next)
-│   │   ├── vercel-react-best-practices/  # vendored: referencia de performance
+│   │   ├── react-references/      # vendored: referencia de performance
 │   │   └── react-architecture/    # tu criterio: carpetas, server/client state, testing
 │   ├── next/                      # solo si el proyecto usa Next (gana sobre react/)
-│   │   ├── next-best-practices/   # referencia dura, API por API
-│   │   └── next-conventions/      # tu criterio: Server/Client, data, optimización
+│   │   ├── next-references/       # referencia dura, API por API
+│   │   └── next-architecture/     # tu criterio: carpetas, Server/Client, data, testing, optimización
 │   └── domains/                   # opt-in, nunca se auto-cargan por stack
 │       ├── conversion-ui/
 │       ├── next-partial-prefetching-adoption/
@@ -162,15 +161,15 @@ wiring por-agente.
       micro + SOLID/patrones
 - [x] `core/ui-visual-craft`, `core/motion-design-system`,
       `core/documentation-writer`
-- [x] `angular/` — `angular-architecture` + `angular-deploy-safety` +
-      referencia oficial vendored (`skills-main`)
+- [x] `angular/` — `angular-architecture` (incluye deploy safety) +
+      referencia oficial vendored (`angular-references`)
 - [x] `react/` — `react-architecture` + referencia de performance vendored
-      (`vercel-react-best-practices`)
-- [x] `next/` — `next-conventions` + referencia vendored (`next-best-practices`)
+      (`react-references`)
+- [x] `next/` — `next-architecture` + referencia vendored (`next-references`)
 - [x] `domains/conversion-ui`, `domains/next-partial-prefetching-adoption`,
       `domains/playwright-visual-review` (opt-in)
 - [ ] `core/performance-budget` — presupuesto de bundle/Lighthouse como skill
-      propia (hoy vive disperso entre `vercel-react-best-practices` y
+      propia (hoy vive disperso entre `react-references` y
       `ui-visual-craft`)
 - [ ] `vue/` — sin skills todavía; el agente de Vue se sacó hasta que exista
       esta base (mismo patrón referencia + arquitectura que los otros tres)

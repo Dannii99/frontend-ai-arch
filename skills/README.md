@@ -31,8 +31,8 @@ framework que realmente usa.
 
 - ¿Sirve igual para cualquier front? → `core/`
 - ¿Depende de APIs/archivos/patrones de un framework? → carpeta de ese framework
-  (ej. `angular-deploy-safety` vive de `angular.json` y `fileReplacements`, así
-  que va en `angular/`).
+  (ej. la sección de deploy safety de `angular-architecture` vive de
+  `angular.json` y `fileReplacements`, así que va en `angular/`).
 
 ## Formato
 

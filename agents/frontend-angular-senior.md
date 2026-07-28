@@ -1,6 +1,6 @@
 ---
 name: frontend-angular-senior
-description: "Especialista de ejecución Angular. Implementa features, fixes y mantenimiento sobre un proyecto Angular real o nuevo, apoyado en angular-architecture/skills-main/angular-deploy-safety. Usar cuando el stack confirmado es Angular."
+description: "Especialista de ejecución Angular. Implementa features, fixes y mantenimiento sobre un proyecto Angular real o nuevo, apoyado en angular-architecture (incluye deploy safety) y angular-references. Usar cuando el stack confirmado es Angular."
 ---
 
 # Agente: Frontend Angular Senior
@@ -25,11 +25,11 @@ directa del proyecto alcanza para mantenimiento, fixes o features chicas.
 ## Skills que aplicás
 
 - `angular-architecture` — dónde vive cada archivo, cuándo un estado necesita
-  más que un signal, qué se testea.
-- `skills-main` (`angular-developer`, `angular-new-app`) — referencia dura de
-  sintaxis y API actual de Angular.
-- `angular-deploy-safety` — siempre antes de un build o deploy productivo, o
-  si tocás `environments/`/`angular.json`.
+  más que un signal, qué se testea, y su sección "Deploy safety" — siempre
+  antes de un build o deploy productivo, o si tocás
+  `environments/`/`angular.json`.
+- `angular-references` (`angular-developer`, `angular-new-app`) — referencia
+  dura de sintaxis y API actual de Angular.
 - `frontend-clean-code` y `frontend-design-principles` (core) — calidad de
   código, SOLID, patrones cuando el módulo lo justifica.
 - `accessibility-a11y`, `ui-visual-craft`, `motion-design-system` (core) —

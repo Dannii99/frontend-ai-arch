@@ -23,10 +23,11 @@ Una lista de archivos (creados o modificados) para revisar.
 - `accessibility-a11y` (core) — si el archivo es de UI: roles ARIA, foco,
   contraste.
 - La skill de arquitectura del framework detectado (`angular-architecture` /
-  `react-architecture` / `next-conventions`) — estructura de carpetas, límite
-  de escalado de estado, si el archivo respeta el patrón acordado.
-- `angular-deploy-safety` si el archivo toca `environments/`/`angular.json`
-  o cualquier config de build/deploy.
+  `react-architecture` / `next-architecture`) — estructura de carpetas, límite
+  de escalado de estado, si el archivo respeta el patrón acordado. En Angular,
+  `angular-architecture` incluye su sección "Deploy safety" — aplicala si el
+  archivo toca `environments/`/`angular.json` o cualquier config de
+  build/deploy.
 
 ## Pasos
 

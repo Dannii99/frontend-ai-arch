@@ -2,14 +2,15 @@
 name: react-architecture
 description: >-
   Fija las decisiones de arquitectura React que la librería deja abiertas:
-  estructura de carpetas (core/shared/features), el límite entre estado de
-  servidor (TanStack Query/SWR) y estado de cliente (useState/Context/store),
-  cuándo escalar a Zustand/Jotai, y qué se testea siempre vs qué alcanza con un
-  smoke test. Úsala al organizar un proyecto React puro (Vite/CRA/Remix, sin
-  Next), al decidir dónde vive un archivo nuevo, al evaluar si un dato necesita
-  un query client o un store, o al revisar un PR de React. No es referencia de
-  performance (ver vercel-react-best-practices para eso) ni aplica a proyectos
-  Next (ver next/).
+  estructura de carpetas (core/shared/features), routing y code-splitting,
+  el límite entre estado de servidor (TanStack Query/SWR) y estado de cliente
+  (useState/Context/store), cuándo escalar a Zustand/Jotai, memoización manual
+  vs React Compiler, qué librería de forms usar, error boundaries, y qué se
+  testea siempre vs qué alcanza con un smoke test. Úsala al organizar un
+  proyecto React puro (Vite/CRA/Remix, sin Next), al decidir dónde vive un
+  archivo nuevo, al evaluar si un dato necesita un query client o un store, o
+  al revisar un PR de React. No es referencia de performance (ver
+  react-references para eso) ni aplica a proyectos Next (ver next/).
 compatibility: react
 metadata:
   category: react-architecture
@@ -19,7 +20,7 @@ metadata:
 # React Architecture
 
 Esta skill no re-enseña React ni repite reglas de performance — eso ya está
-cubierto en profundidad en `vercel-react-best-practices` (referencia vendored
+cubierto en profundidad en `react-references` (referencia vendored
 de Vercel Engineering: waterfalls, bundle size, rerenders, rendering, JS
 micro-opts). Consultá esa skill para "qué patrón de performance aplica".
 
@@ -32,7 +33,7 @@ responsabilidad) viven en `frontend-clean-code` (core); SOLID y los patrones
 de arquitectura (Facade, Repository, Adapter, límites entre módulos) viven en
 `frontend-design-principles` (core). Si algo aplica a
 cualquier front, no lo repitas acá: es core. Y si el proyecto es Next, no
-cargues esta skill además de `next/` — Next ya es React, y `next-conventions`
+cargues esta skill además de `next/` — Next ya es React, y `next-architecture`
 cubre sus propias decisiones de Server/Client Components.
 
 ## Cuándo usar
@@ -72,6 +73,22 @@ src/
   `hooks/` internos son privados a la feature por default; si hace falta
   compartirlos, se promueven a `shared/` explícitamente.
 
+## Enrutamiento y code-splitting
+
+React puro no trae router — es una decisión de arquitectura real, no un
+detalle:
+
+- **React Router** es el default pragmático para la gran mayoría de
+  proyectos Vite/CRA/Remix-less: maduro, sin fricción de adopción.
+- **TanStack Router** cuando el proyecto quiere rutas y loaders type-safe de
+  punta a punta (search params tipados, validación de loaders en tiempo de
+  compilación) — es más setup, no lo elijas por defecto sin esa necesidad
+  concreta.
+- **Una feature por ruta, lazy-cargada**: cada entrada de `features/` se
+  carga con `React.lazy()` + `<Suspense>` en el punto de ruta, mismo
+  criterio que evita que una feature no usada infle el bundle inicial (ver
+  `bundle-dynamic-imports` en `react-references`).
+
 ## Estado de servidor vs estado de cliente
 
 La primera pregunta ante cualquier estado nuevo: **¿este dato vive en un
@@ -80,7 +97,7 @@ servidor o solo en esta sesión de UI?** La respuesta decide la herramienta.
 **Estado de servidor (cualquier dato que viene de una red): siempre TanStack
 Query o SWR.** Nunca `useEffect` + `fetch` + `useState` a mano — eso reintroduce
 manualmente el cache, la deduplicación y la revalidación que la librería ya
-resuelve (y es exactamente lo que `vercel-react-best-practices` marca como
+resuelve (y es exactamente lo que `react-references` marca como
 anti-patrón en sus reglas `async-*` y `client-swr-dedup`).
 
 **Estado de cliente (UI pura: un modal abierto, un tab activo, un formulario
@@ -99,6 +116,29 @@ alguna de estas:
   solo.
 
 Si ninguna aplica, no sumes un store — es complejidad que no se paga sola.
+
+## Memoización: manual vs React Compiler
+
+Antes de agregar `useMemo`/`useCallback`/`memo` a mano, confirmá si el
+proyecto tiene **React Compiler** habilitado (`babel-plugin-react-compiler` o
+el equivalente en su build). Si lo tiene, la memoización manual **no hace
+falta** — el compilador ya optimiza los re-renders automáticamente, y
+agregarla igual es ruido sin beneficio (ver la nota de
+`react-references`, regla `rerender-memo`). Si el proyecto no lo tiene
+habilitado, seguí aplicando las reglas de memoización de `react-references`
+tal como están.
+
+## Forms
+
+Librería de forms es una decisión recurrente, no un detalle menor:
+
+- **React Hook Form** como default para cualquier form con validación real,
+  campos condicionales, o más de 2-3 campos — minimiza re-renders (no
+  controlado por default) y su integración con schemas (Zod u otro) cubre la
+  validación sin código a mano.
+- **Controlled inputs nativos** (`useState` + `onChange`) solo para 1-2
+  campos triviales sin validación cruzada (ej. un buscador). No lo escales a
+  un form real — ahí ya corresponde React Hook Form.
 
 ## Testing: qué se testea y qué no
 
@@ -124,6 +164,19 @@ el modelo; acá va la política de **qué amerita test**:
 - **Mocks solo en los límites externos** (HTTP vía MSW, storage). Nunca
   mockees un hook o componente propio para testear otro propio.
 
+## Manejo de errores
+
+React no trae un mecanismo built-in (a diferencia de `error.tsx` en Next) —
+dónde vive el Error Boundary es una decisión explícita:
+
+- **Un Error Boundary raíz siempre**, envolviendo toda la app — última línea
+  de defensa para que un error no deje una pantalla en blanco.
+- **Boundaries por feature/ruta** cuando esa feature puede fallar de forma
+  independiente del resto de la app (ej. un widget de terceros, una sección
+  con su propio fetch) — así un error ahí no tira abajo el resto de la UI.
+  No pongas un boundary por cada componente; es una herramienta de
+  aislamiento a nivel de feature, no de detalle.
+
 ## Respetar lo que ya existe
 
 Si un proyecto ya tiene otra estructura de carpetas o ya usa Redux/Recoil sin
@@ -140,3 +193,6 @@ patrón ya establecido gana salvo que el usuario pida migrar.
    aplicó (o por qué ninguno aplicó).
 4. Qué quedó con test completo, qué con smoke test, y qué dejaste sin migrar
    por respetar el estado actual del proyecto.
+5. Si el cambio introdujo o tocó un form: qué librería usaste y por qué.
+6. Si agregaste o evitaste memoización manual, y si el proyecto tiene React
+   Compiler habilitado.

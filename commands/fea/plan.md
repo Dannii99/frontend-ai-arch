@@ -26,7 +26,7 @@ código real, vía `/fea:test`.
 Leer `package.json` del proyecto: `@angular/core` → Angular; `next` → Next.js;
 si no, `react` → React puro. Con eso ya sabés qué skill de arquitectura citar
 más adelante (`angular-architecture` / `react-architecture` /
-`next-conventions`) — no hace falta ninguna capa de configuración adicional.
+`next-architecture`) — no hace falta ninguna capa de configuración adicional.
 
 ## Pasos
 

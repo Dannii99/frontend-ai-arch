@@ -271,7 +271,7 @@ PM="$(detect_pm)"; log "package manager: $PM"
 
 # --- Stack ---
 # Next incluye "react" como dependencia, pero no querés las dos mitades a la
-# vez: next/ ya asume React (ver next-conventions). Next gana si está.
+# vez: next/ ya asume React (ver next-architecture). Next gana si está.
 FRAMEWORKS=()
 has_dep "@angular/core" && FRAMEWORKS+=("angular")
 if has_dep "next"; then

@@ -40,8 +40,9 @@ ya está encapsulado en una skill.
 - **Testing:** cobertura significativa; los tests fallan por la razón correcta.
 - **Performance:** respetar el budget de bundle y métricas de carga.
 - **Deploy safety:** nada de dev (URLs locales, endpoints de staging, tokens,
-  valores hardcodeados) se filtra al build de producción. Ver la skill de
-  deploy-safety del framework correspondiente (p. ej. `angular-deploy-safety`).
+  valores hardcodeados) se filtra al build de producción. Ver la sección de
+  deploy safety dentro de la skill de arquitectura del framework
+  correspondiente (p. ej. `angular-architecture`).
 
 ## Reglas del proyecto (completar por proyecto)
 

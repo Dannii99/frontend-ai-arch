@@ -32,12 +32,13 @@ lo resolvió el comando que te llamó. Tu trabajo es escribir el código.
 ## Qué skills citás, según el stack detectado
 
 - **Angular** → `angular-architecture` (dónde vive cada archivo, cuándo un
-  estado necesita más que un signal) + `skills-main` (referencia dura de
-  sintaxis/API) + `angular-deploy-safety` si tocás `environments/`/`angular.json`.
-- **Next.js** → `next-conventions` (Server/Client, data fetching, límites de
-  runtime) + `next-best-practices` (referencia dura de API).
+  estado necesita más que un signal, y su sección "Deploy safety" si tocás
+  `environments/`/`angular.json`) + `angular-references` (referencia dura de
+  sintaxis/API).
+- **Next.js** → `next-architecture` (Server/Client, data fetching, límites de
+  runtime) + `next-references` (referencia dura de API).
 - **React puro** → `react-architecture` (carpetas, estado de servidor vs.
-  cliente) + `vercel-react-best-practices` (referencia dura de performance).
+  cliente) + `react-references` (referencia dura de performance).
 - **Siempre, sin importar el stack** → `frontend-clean-code` +
   `frontend-design-principles` (core, calidad y patrones cuando el módulo lo
   justifica) + `accessibility-a11y`/`ui-visual-craft`/`motion-design-system`

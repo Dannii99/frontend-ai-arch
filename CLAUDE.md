@@ -30,15 +30,14 @@ skills/
     motion-design-system/
     documentation-writer/
   angular/              # only installed if the target project uses Angular
-    skills-main/          # vendored: github.com/angular/skills (see BUILD_INFO) — hard reference
-    angular-architecture/ # house opinion: folders, state, testing policy
-    angular-deploy-safety/
+    angular-references/   # vendored: github.com/angular/skills (see BUILD_INFO) — hard reference
+    angular-architecture/ # house opinion: folders, state, testing policy, deploy safety
   react/                # only installed if the target uses React WITHOUT Next
-    vercel-react-best-practices/  # vendored: Vercel Engineering performance reference
-    react-architecture/           # house opinion: folders, server/client state, testing policy
+    react-references/     # vendored: Vercel Engineering performance reference
+    react-architecture/   # house opinion: folders, server/client state, testing policy
   next/                 # only installed if the target uses Next (wins over react/, see install.sh)
-    next-best-practices/  # house-adapted API-by-API reference (user-invocable: false)
-    next-conventions/     # house opinion: Server/Client, data patterns, optimization defaults
+    next-references/       # house-adapted API-by-API reference (user-invocable: false)
+    next-architecture/      # house opinion: folders, Server/Client, data patterns, testing, optimization
   domains/              # opt-in only, never auto-loaded by stack detection (--with <name>)
     conversion-ui/
     next-partial-prefetching-adoption/  # vendored from vercel/next.js canary skills
@@ -82,11 +81,11 @@ two-layer split, and this is the single most important thing to preserve when
 touching skills:
 
 1. **A hard reference skill** — vendored, API-by-API, not house opinion.
-   `skills-main` (Angular), `vercel-react-best-practices` (React),
-   `next-best-practices` (Next). Don't edit these as if they were your own
+   `angular-references` (Angular), `react-references` (React),
+   `next-references` (Next). Don't edit these as if they were your own
    voice; they answer "what exists and how does it work."
 2. **A house architecture skill** — `angular-architecture`,
-   `react-architecture`, `next-conventions`. These answer "what did we decide,
+   `react-architecture`, `next-architecture`. These answer "what did we decide,
    given that the reference leaves it open": folder structure
    (`core/`/`shared/`/`features/`), the state-management escalation boundary
    (e.g. Angular: signals-first, store only past a concrete pain trigger;
@@ -120,15 +119,24 @@ this size.
 ## Vendored subtrees
 
 Vendored = don't rewrite in house voice, don't treat as your own opinion:
-- `skills/angular/skills-main/` — github.com/angular/skills (see its `BUILD_INFO` for the imported commit/date).
-- `skills/react/vercel-react-best-practices/` — Vercel Engineering, has its own build tooling (`metadata.json`, generated `AGENTS.md`).
+- `skills/angular/angular-references/` — github.com/angular/skills (see its `BUILD_INFO` for the imported commit/date). Folder was renamed from the upstream `skills-main` for naming consistency with `react-references`/`next-references`; the internal `angular-developer`/`angular-new-app` SKILL.md files keep their own `name:` unchanged (they were never named after the containing folder).
+- `skills/react/react-references/` — Vercel Engineering, has its own build tooling (`metadata.json`, generated `AGENTS.md`). Renamed from `vercel-react-best-practices`; its `SKILL.md` `name:` was updated to match (Agent Skills requires `name:` == folder name), but the vendored prose (`README.md`, `AGENTS.md`, `metadata.json`, the 70 `rules/*.md`) is untouched — it describes the Vercel package itself, not our folder choice.
 - `skills/domains/next-partial-prefetching-adoption/` — vercel/next.js canary skills, noted via `metadata.source` in its frontmatter.
 
-`skills/next/next-best-practices/` is a partial exception: it's a curated,
-dispatcher-style API reference (marked `user-invocable: false`) that behaves
-like a vendored reference in role, but isn't attributed to an external repo —
-treat it the same way (don't fold house opinion into it) unless told
-otherwise.
+`skills/next/next-references/` (renamed from `next-best-practices`) is a
+partial exception: it's a curated, dispatcher-style API reference (marked
+`user-invocable: false`) that behaves like a vendored reference in role, but
+isn't attributed to an external repo — treat it the same way (don't fold
+house opinion into it) unless told otherwise.
+
+`skills/angular/angular-deploy-safety/` no longer exists as its own skill —
+it was folded into `angular-architecture/SKILL.md` as a "Deploy safety"
+section. It was never a separate *domain*, just another Angular-specific
+opinion (like folder structure or the signals/store boundary), so splitting
+it into its own file added a lookup hop without adding independence. Don't
+re-split it out without a concrete reason — if a similar deploy-safety need
+ever arises for React/Next, it goes into `react-architecture`/
+`next-architecture` the same way, not a new standalone skill.
 
 When adapting an external skill for real house use (as opposed to vendoring
 it verbatim for reference), rewrite it in this project's own voice —
@@ -246,7 +254,7 @@ without native slash-command support — it just won't be invoked via
 The installer equips a *target* project (elsewhere on disk) with this
 ecosystem. Reading it top to bottom explains the whole install flow:
 
-1. Detects package manager (`pnpm-lock.yaml`/`yarn.lock`/`bun.lockb`/default npm) and framework from the target's `package.json`: `@angular/core` → angular; `next` → next; else `react` → react. Next wins over react when both are present (a Next app always depends on `react` too, but `next-conventions` explicitly says not to load `react/` alongside it — see `has_dep` branching in the "Stack" section of the script).
+1. Detects package manager (`pnpm-lock.yaml`/`yarn.lock`/`bun.lockb`/default npm) and framework from the target's `package.json`: `@angular/core` → angular; `next` → next; else `react` → react. Next wins over react when both are present (a Next app always depends on `react` too, but `next-architecture` explicitly says not to load `react/` alongside it — see `has_dep` branching in the "Stack" section of the script).
 2. Detects which AI agent binary is installed (`claude`, `cursor`, `codex`, `opencode`); prompts if 0 or 2+ found.
 3. Checks for the external "engines" this ecosystem depends on — OpenSpec (spec-driven dev workflow) and Engram (persistent memory via MCP) — and offers (never forces) to install missing ones.
 4. Copies `skills/core/` + the detected framework's skill dir (including its vendored reference and any nested `references/` files, since it copies the whole subtree) into the agent's own global skills directory (e.g. `~/.claude/skills`) — never into the target repo. Copies `agents/` (all 8 files — conversational roles + mechanical subagents, see "agents/" above) into the agent's own subagents directory (e.g. `~/.claude/agents`) via `copy_optional_dir()`, with a guaranteed destination for all 4 supported agents. Copies `commands/` into the agent's own commands directory (e.g. `~/.claude/commands`) the same way, but non-blocking: if `commands_dir_for()` returns empty for the detected agent (no known native support), it warns and moves on instead of failing.

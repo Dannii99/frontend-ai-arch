@@ -1,5 +1,5 @@
 ---
-name: next-best-practices
+name: next-references
 description: Next.js best practices - file conventions, RSC boundaries, data patterns, async APIs, metadata, error handling, route handlers, image/font optimization, bundling
 user-invocable: false
 ---
@@ -7,7 +7,7 @@ user-invocable: false
 # Next.js Best Practices
 
 Reference layer: API-by-API cheat sheet for Next.js. `user-invocable: false`
-because it's not meant to be reached for directly — `next-conventions` (same
+because it's not meant to be reached for directly — `next-architecture` (same
 `skills/next/` folder) is the opinionated decision layer that cites specific
 sections here when a default needs the deeper example. Apply these rules when
 writing or reviewing Next.js code.

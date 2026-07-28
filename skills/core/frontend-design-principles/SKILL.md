@@ -19,7 +19,7 @@ metadata:
 
 Esta skill es la capa del medio: `frontend-clean-code` cubre calidad a nivel
 micro (nombres, tipos, tamaño de función); `angular-architecture` /
-`react-architecture` / `next-conventions` deciden estructura de carpetas y
+`react-architecture` / `next-architecture` deciden estructura de carpetas y
 estado por framework. Acá van los **principios** (SOLID) y los **patrones**
 que mantienen esa arquitectura estable cuando el proyecto crece — el nivel de
 módulo/servicio, no el de función ni el de carpeta.
@@ -136,7 +136,7 @@ principio general detrás: DIP aplicado a nivel de módulo, no de clase.
 
 - Nomenclatura, tipado, tamaño de función → `frontend-clean-code` (core).
 - Dónde vive cada archivo, estado de UI vs servidor, testing por framework →
-  `angular-architecture` / `react-architecture` / `next-conventions`.
+  `angular-architecture` / `react-architecture` / `next-architecture`.
 - Esta skill da el principio y el patrón; las de framework deciden la
   implementación concreta (un `inject()` en Angular, un hook en React).
 

@@ -14,7 +14,7 @@ Te invoca `/fea:test`, después de que `/fea:execute` terminó.
   los escenarios `#### Scenario:` (WHEN/THEN).
 - El código implementado, para leer las firmas reales.
 - La sección de testing de la skill de arquitectura del framework detectado
-  (`angular-architecture` / `react-architecture` / `next-conventions`) — ahí
+  (`angular-architecture` / `react-architecture` / `next-architecture`) — ahí
   está definido qué siempre lleva test completo, qué alcanza con smoke test,
   y qué queda para e2e. No inventes tu propio criterio de cobertura — es el
   que ya fija esa skill.

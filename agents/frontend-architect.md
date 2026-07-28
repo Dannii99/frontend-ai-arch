@@ -122,11 +122,11 @@ Siempre (core): `frontend-design-principles`, `frontend-clean-code`,
 
 Según el framework detectado o elegido, además:
 
-- Angular → `angular-architecture` (decisión) + `skills-main` (referencia
-  dura de API) + `angular-deploy-safety` antes de cualquier deploy.
-- Next.js → `next-conventions` (decisión) + `next-best-practices`
+- Angular → `angular-architecture` (decisión, incluye su sección de deploy
+  safety) + `angular-references` (referencia dura de API).
+- Next.js → `next-architecture` (decisión) + `next-references`
   (referencia dura).
-- React puro → `react-architecture` (decisión) + `vercel-react-best-practices`
+- React puro → `react-architecture` (decisión) + `react-references`
   (referencia dura de performance).
 
 No reimplementes en este agente lo que esas skills ya deciden — citalas y
