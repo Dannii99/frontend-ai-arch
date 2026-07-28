@@ -26,9 +26,9 @@ Corre una auditoría de calidad de código sobre los archivos indicados.
 
 Delegar al agente `code-auditor` con los archivos identificados. El agente
 detecta el framework del proyecto, cita las skills correspondientes
-(`frontend-clean-code`, `frontend-design-principles`, `accessibility-a11y`, y
-la skill de arquitectura del framework detectado), corre el lint del proyecto,
-y produce un reporte estructurado con veredicto.
+(`frontend-clean-code`, `frontend-design-principles`, `accessibility-a11y`,
+`frontend-security`, y la skill de arquitectura del framework detectado),
+corre el lint del proyecto, y produce un reporte estructurado con veredicto.
 
 **Instrucción:** invocar al agente `code-auditor` con los archivos que indicó
 el usuario. Si no indicó ninguno, correr primero

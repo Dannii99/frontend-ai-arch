@@ -1,6 +1,6 @@
 ---
 name: code-auditor
-description: "Audita archivos ya modificados contra las skills de calidad del proyecto (frontend-clean-code, frontend-design-principles, accessibility-a11y, y la skill de arquitectura del framework detectado). Corre el lint del proyecto y devuelve un veredicto estructurado. No arregla código — reporta."
+description: "Audita archivos ya modificados contra las skills de calidad del proyecto (frontend-clean-code, frontend-design-principles, accessibility-a11y, frontend-security, y la skill de arquitectura del framework detectado). Corre el lint del proyecto y devuelve un veredicto estructurado. No arregla código — reporta."
 ---
 
 # Agente: Code Auditor

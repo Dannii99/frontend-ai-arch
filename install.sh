@@ -279,7 +279,9 @@ if has_dep "next"; then
 elif has_dep "react"; then
   FRAMEWORKS+=("react")
 fi
-if [[ ${#FRAMEWORKS[@]} -eq 0 ]]; then log "stack front: ninguno detectado (solo core)"
+if [[ ${#FRAMEWORKS[@]} -eq 0 ]]; then
+  log "stack front: ninguno detectado (solo core)"
+  [[ -f "$PROJECT_DIR/package.json" ]] || warn "proyecto nuevo sin stack todavía — cuando lo scaffoldees (ng new / create-next-app / npm create vite), volvé a correr este instalador para sumar la skill de arquitectura correspondiente"
 else log "stack front: ${FRAMEWORKS[*]}"; fi
 
 # --- Agente ---

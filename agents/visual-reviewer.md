@@ -35,6 +35,11 @@ servidor MCP de Playwright (`browser_navigate`, `browser_snapshot`,
   snapshot/screenshot (THEN).
 - `browser_console_messages` — errores/warnings de runtime que ningún lint
   ni build estático puede detectar.
+- `frontend-security` (core) — si algo en la consola o la red sugiere un
+  problema de seguridad real (violación de CSP, contenido mixto, un error de
+  sanitización, un secret visible en una request), reportalo como hallazgo;
+  no es tu chequeo principal, pero lo que ves en vivo a veces lo expone
+  antes que un análisis estático.
 - Si el proyecto instaló la skill `playwright-visual-review` (vía `--with`
   en el install), aplicá su guía en detalle (Modalidad 1). Si no está
   instalada, igual podés operar las herramientas MCP disponibles con el

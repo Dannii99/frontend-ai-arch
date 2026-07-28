@@ -41,7 +41,12 @@ Podés encontrarte con tres situaciones:
    trade-off — no elijas por popularidad. Angular para estructura fuerte,
    formularios complejos, dashboards/admin de largo plazo; Next.js para SEO,
    SSR/SSG, contenido, iteración rápida sobre React; React + Vite para SPA o
-   herramienta interna sin necesidad de las features de Next.
+   herramienta interna sin necesidad de las features de Next. Si el proyecto
+   todavía no tiene `package.json` (instalaste este ecosistema antes de
+   scaffoldear nada), una vez decidido el stack y corrido el scaffolder
+   (`ng new`/`npx create-next-app`/`npm create vite`), recordá al usuario
+   **volver a correr `install.sh`** — recién ahí hay `package.json` para
+   detectar el framework e instalar su skill de arquitectura.
 2. **Ya existe un proyecto.** Inspeccionalo primero: `package.json`,
    estructura de carpetas, routing, estilos, librerías de UI, testing. El
    stack detectado es el default — no proponés cambiarlo sin pedido explícito.

@@ -89,8 +89,8 @@ punto, invocados por task desde `commands/fea/`):
 2. **`frontend-architect`** — lee ese contexto si existe, detecta o decide el
    stack, y para cambios no triviales abre una propuesta en `openspec/` antes
    de delegar — hoy ese flujo lo mecanizan los comandos `/fea:plan` →
-   `/fea:execute` → `/fea:verify` → `/fea:archive` (`commands/fea/`). No
-   implementa directamente.
+   `/fea:execute` → `/fea:verify` → `/fea:review` → `/fea:archive`
+   (`commands/fea/`). No implementa directamente.
 3. **`frontend-angular-senior`** / **`frontend-react-next`** — especialistas
    de ejecución. Implementan apoyándose en las skills del framework
    correspondiente; no reinventan el criterio que esas skills ya fijan.
@@ -108,21 +108,22 @@ punto, invocados por task desde `commands/fea/`):
 `docs/` (contexto de producto) y `openspec/` (specs técnicas) son carpetas
 distintas con dueños distintos — no se mezclan.
 
-## Uso
+## Instalación y uso
 
-**Una sola vez** (los motores): un agente de IA (Claude Code / Cursor / Codex /
-OpenCode), OpenSpec (`npm i -g @fission-ai/openspec@latest`), Engram
+### Una sola vez — los motores
+
+Un agente de IA (Claude Code / Cursor / Codex / OpenCode), OpenSpec
+(`npm i -g @fission-ai/openspec@latest`), Engram
 (`brew install gentleman-programming/tap/engram` o `go install …`) y
 Playwright MCP (se sirve vía `npx @playwright/mcp@latest`, sin instalación
-global — el instalador lo registra como MCP server para tu agente). El
-instalador detecta y cablea los tres.
-
-**Por proyecto**, parado en el proyecto (nuevo o existente):
+global). El instalador detecta los tres y ofrece instalar/cablear el que
+falte — no lo fuerza.
 
 ```bash
 ~/dev/tools/frontend-ai-ecosystem/install.sh          # detecta stack y agente
 ~/dev/tools/frontend-ai-ecosystem/install.sh --dry-run # muestra el plan sin tocar
 ~/dev/tools/frontend-ai-ecosystem/install.sh --agent cursor --yes
+~/dev/tools/frontend-ai-ecosystem/install.sh --with conversion-ui  # + skill opt-in de domains/
 ```
 
 El instalador detecta el framework por `package.json` e instala solo las skills
@@ -130,15 +131,66 @@ relevantes (`core` + framework), coloca skills y agentes en el dir global del
 agente (viajan con vos, no ensucian el repo), inyecta tus estándares en
 `AGENTS.md` como bloque idempotente, y orquesta `openspec init`, `engram setup`
 y el registro del MCP de Playwright para que cada motor haga su propio
-wiring por-agente.
+wiring por-agente. Es **idempotente** — correrlo de nuevo sobre el mismo
+proyecto no duplica ni rompe nada, solo actualiza.
+
+### Paso a paso — proyecto nuevo (desde cero)
+
+1. Creá la carpeta del proyecto y parate ahí (`mkdir mi-app && cd mi-app`).
+2. Corré `install.sh`. Todavía no hay `package.json`, así que instala solo
+   `core/` + `agents/` + `commands/` + los 3 motores — ningún framework
+   todavía, y te lo dice explícitamente.
+3. Hablá con **`project-owner`** (pedile al agente "actuá como
+   project-owner", o invocalo como subagente si tu herramienta lo soporta
+   nativamente) para convertir la idea en `docs/project-context.md`.
+4. Hablá con **`frontend-architect`** para decidir el stack (Angular / Next /
+   React) según lo que necesita el producto.
+5. Scaffoldeá el proyecto real con el CLI del framework elegido —
+   `ng new`, `npx create-next-app`, o `npm create vite`. Recién ahí existe
+   `package.json`.
+6. **Volvé a correr `install.sh`** (mismo comando que en el paso 2) — ahora
+   sí detecta el framework e instala su skill de arquitectura
+   (`angular-architecture` / `react-architecture` / `next-architecture`).
+7. Arrancá el ciclo: `/fea:plan <nombre-del-cambio>` para la primera feature.
+
+### Paso a paso — proyecto ya existente
+
+1. Parate en la raíz del repo real (el que ya tiene su `package.json`,
+   código, y posiblemente su propio `AGENTS.md`/`CLAUDE.md`).
+2. Corré `install.sh`. Detecta el stack automáticamente, instala solo lo
+   relevante, y **no pisa nada tuyo**: el bloque de `AGENTS.md` se inyecta
+   entre marcadores idempotentes (`<!-- FEA:START/END -->`) sin tocar el
+   resto del archivo, y `openspec` corre `update` en vez de `init` si ya
+   estaba inicializado.
+3. Empezá a usar los comandos directo sobre el código real — no hace falta
+   `project-owner` ni decidir stack de nuevo (ver el escenario "Ya existe un
+   proyecto" en `agents/frontend-architect.md`).
+
+### Uso día a día — comandos `/fea:*`
+
+| Comando | Cuándo usarlo |
+|---|---|
+| `/fea:explore` | Pensar en voz alta antes de comprometerte a un enfoque — no implementa nada. |
+| `/fea:plan <nombre>` | Feature nueva o cambio no trivial — crea el change de OpenSpec (proposal, specs, design, tasks). |
+| `/fea:execute <nombre>` | Implementa las tasks del plan — loop `code-writer` ⇄ `code-auditor`, con lint/build/test al final. |
+| `/fea:test <nombre>` | Opcional, después de `execute` — genera y corre tests contra el código real. |
+| `/fea:verify <nombre>` | Antes de archivar — chequeo estático del código contra los artifacts (completeness/correctness/coherence). |
+| `/fea:review <nombre>` | Antes de archivar, si el change tiene UI — revisión en vivo con Playwright MCP (accesibilidad real, visual, consola). |
+| `/fea:archive <nombre>` | Cierra el change — gate de lint, sincroniza specs a `openspec/specs/`. |
+| `/fea:fix <descripción>` | Bug o tarea chica (≤3 archivos, sin cambios de arquitectura) — sin artifacts de OpenSpec. |
+| `/fea:audit <archivo\|carpeta>` | Auditoría ad-hoc de calidad sobre archivos puntuales, fuera del ciclo de un change. |
+
+Si tu agente no soporta comandos custom (`/fea:*` es nativo de Claude Code),
+el mismo flujo se sigue a mano con el CLI de OpenSpec — ver
+`agents/frontend-architect.md`.
 
 ## Dos destinos, una regla
 
 - **Global** (`~/.<agente>/skills/`, `~/.<agente>/agents/`,
   `~/.<agente>/commands/`, memoria de Engram): tuyo, viaja con vos, no se
   commitea al repo del cliente. Tu IP no queda regada en repos ajenos.
-  `agents/` (los 4 roles + los 3 subagentes) tiene destino garantizado en los
-  4 agentes soportados, igual que `skills/`. Los comandos `/fea:*` sí son
+  `agents/` (los 4 roles + los 4 subagentes mecánicos) tiene destino
+  garantizado en los 4 agentes soportados, igual que `skills/`. Los comandos `/fea:*` sí son
   nativos de Claude Code sin equivalente conocido en el resto — ahí
   `install.sh` instala en el mejor esfuerzo y avisa si no hay destino
   conocido, sin bloquear el resto.
@@ -155,6 +207,26 @@ wiring por-agente.
 > `install.sh`). Si ves `.claude/skills/openspec-*` adentro de un repo de
 > cliente, es lo esperado — no lo confundas con una fuga de nuestras skills
 > globales (`~/.claude/skills/`), que siguen viviendo solo en tu máquina.
+
+## Qué capas cubre
+
+El criterio senior que carga el agente, resumido — cada capa la respalda una
+skill real, no es solo una promesa:
+
+| Capa | Qué cubre | Skill que la respalda |
+|---|---|---|
+| **Accesibilidad** | HTML semántico, ARIA, teclado, contraste, foco — veredicto semáforo. | `accessibility-a11y` (core) |
+| **Calidad de código** | Naming, tipado, tamaño de función, SOLID, patrones (Facade/Repository/Adapter) gateados a un trigger concreto. | `frontend-clean-code` + `frontend-design-principles` (core) |
+| **Seguridad de aplicación** | XSS (escape hatches como `dangerouslySetInnerHTML`/`bypassSecurityTrust*`), inyección, CSRF, validación de input server-side, secrets fuera del cliente. | `frontend-security` (core) |
+| **Seguridad de deploy** | Nada de dev (URLs locales, tokens, valores hardcodeados) se filtra al build de producción; `NEXT_PUBLIC_*` no expone secrets. | Sección "Deploy safety" de `angular-architecture`; "Variables de entorno" de `next-architecture` |
+| **Arquitectura de framework** | Estructura de carpetas (core/shared/features), límite de escalado de estado, routing, forms, SSR/hydration, error handling. | `angular-architecture` / `react-architecture` / `next-architecture` |
+| **Testing** | Qué amerita test completo vs. smoke test vs. e2e (Playwright) — política objetiva, no "todo" ni "nada". | Sección de testing de cada `*-architecture` |
+| **Diseño visual y motion** | Jerarquía, espaciado, estados, animaciones con propósito. | `ui-visual-craft`, `motion-design-system` (core) |
+| **Performance** | Bundle size, waterfalls, rerenders — reglas priorizadas por impacto. | `*-references` (vendored) citadas por cada `*-architecture` |
+
+Todas menos las de framework se instalan siempre (`core/`); las de framework
+se instalan solo si el proyecto las usa; las de `domains/` son opt-in
+explícito vía `--with`.
 
 ## Roadmap de skills
 

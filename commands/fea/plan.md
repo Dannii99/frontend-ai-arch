@@ -23,10 +23,17 @@ código real, vía `/fea:test`.
 
 ## 0. Detectar el stack
 
-Leer `package.json` del proyecto: `@angular/core` → Angular; `next` → Next.js;
-si no, `react` → React puro. Con eso ya sabés qué skill de arquitectura citar
-más adelante (`angular-architecture` / `react-architecture` /
-`next-architecture`) — no hace falta ninguna capa de configuración adicional.
+Leer `package.json` del proyecto: `@angular/core` → Angular; `next` →
+Next.js; `react` (sin `next`) → React puro. Con eso ya sabés qué skill de
+arquitectura citar más adelante (`angular-architecture` /
+`react-architecture` / `next-architecture`) — no hace falta ninguna capa de
+configuración adicional.
+
+**Si no hay `package.json`, o hay uno pero no matchea ninguno de los tres**:
+no asumas un framework — preguntá cuál es el stack (o confirmá si el
+proyecto todavía no se scaffoldeó). Un `/fea:plan` corriendo contra un
+proyecto sin stack decidido normalmente significa que falta el paso de
+`frontend-architect` antes de esto.
 
 ## Pasos
 
