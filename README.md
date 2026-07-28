@@ -50,9 +50,10 @@ fina de adaptadores dentro de `install.sh`.
 │   │   └── next-conventions/      # tu criterio: Server/Client, data, optimización
 │   └── domains/                   # opt-in, nunca se auto-cargan por stack
 │       ├── conversion-ui/
-│       └── next-partial-prefetching-adoption/
+│       ├── next-partial-prefetching-adoption/
+│       └── playwright-visual-review/  # revisión en vivo (MCP) + e2e persistido
 ├── commands/fea/                 # slash-commands (/fea:*): mecanizan el flujo de OpenSpec
-│   ├── plan.md · execute.md · test.md · verify.md · archive.md
+│   ├── plan.md · execute.md · test.md · verify.md · review.md · archive.md
 │   └── fix.md · explore.md · audit.md
 ├── agents/                       # roles + subagentes: quién hace qué con las skills de arriba
 │   ├── project-owner.md          # rol: scoping de producto, previo a cualquier decisión técnica
@@ -61,7 +62,8 @@ fina de adaptadores dentro de `install.sh`.
 │   ├── frontend-react-next.md        # rol: especialista de ejecución React/Next
 │   ├── code-writer.md            # subagente: implementa una task (usa /fea:execute, /fea:fix)
 │   ├── code-auditor.md           # subagente: audita contra las skills de calidad
-│   └── test-generator.md         # subagente: genera tests (usa /fea:test)
+│   ├── test-generator.md         # subagente: genera tests (usa /fea:test)
+│   └── visual-reviewer.md        # subagente: revisión en vivo con Playwright MCP (usa /fea:review)
 └── install.sh                    # instalador: detecta stack + agente, orquesta motores
 ```
 
@@ -94,8 +96,13 @@ punto, invocados por task desde `commands/fea/`):
 4. **`code-writer`** / **`code-auditor`** / **`test-generator`** — subagentes
    que usa `/fea:execute`/`/fea:fix`/`/fea:test` por cada task: implementan,
    auditan contra las mismas skills de calidad, y generan tests después de
-   implementar. No se invocan directo — son la capa mecánica detrás de los
-   comandos.
+   implementar (incluyendo `.spec.ts` de Playwright persistidos para los
+   escenarios que la política de testing marca "e2e"). No se invocan
+   directo — son la capa mecánica detrás de los comandos.
+5. **`visual-reviewer`** — subagente que usa `/fea:review`: maneja Playwright
+   MCP contra la app corriendo para una revisión en vivo (accesibilidad real
+   del DOM, consistencia visual, consola del browser) — complementa a
+   `/fea:verify`, que es solo análisis estático. No genera archivos.
 
 `docs/` (contexto de producto) y `openspec/` (specs técnicas) son carpetas
 distintas con dueños distintos — no se mezclan.
@@ -103,9 +110,11 @@ distintas con dueños distintos — no se mezclan.
 ## Uso
 
 **Una sola vez** (los motores): un agente de IA (Claude Code / Cursor / Codex /
-OpenCode), OpenSpec (`npm i -g @fission-ai/openspec@latest`) y Engram
-(`brew install gentleman-programming/tap/engram` o `go install …`). El
-instalador también los detecta y te ofrece instalarlos si faltan.
+OpenCode), OpenSpec (`npm i -g @fission-ai/openspec@latest`), Engram
+(`brew install gentleman-programming/tap/engram` o `go install …`) y
+Playwright MCP (se sirve vía `npx @playwright/mcp@latest`, sin instalación
+global — el instalador lo registra como MCP server para tu agente). El
+instalador detecta y cablea los tres.
 
 **Por proyecto**, parado en el proyecto (nuevo o existente):
 
@@ -118,8 +127,9 @@ instalador también los detecta y te ofrece instalarlos si faltan.
 El instalador detecta el framework por `package.json` e instala solo las skills
 relevantes (`core` + framework), coloca skills y agentes en el dir global del
 agente (viajan con vos, no ensucian el repo), inyecta tus estándares en
-`AGENTS.md` como bloque idempotente, y orquesta `openspec init` y
-`engram setup` para que cada uno haga su propio wiring por-agente.
+`AGENTS.md` como bloque idempotente, y orquesta `openspec init`, `engram setup`
+y el registro del MCP de Playwright para que cada motor haga su propio
+wiring por-agente.
 
 ## Dos destinos, una regla
 
@@ -157,8 +167,8 @@ agente (viajan con vos, no ensucian el repo), inyecta tus estándares en
 - [x] `react/` — `react-architecture` + referencia de performance vendored
       (`vercel-react-best-practices`)
 - [x] `next/` — `next-conventions` + referencia vendored (`next-best-practices`)
-- [x] `domains/conversion-ui`, `domains/next-partial-prefetching-adoption`
-      (opt-in)
+- [x] `domains/conversion-ui`, `domains/next-partial-prefetching-adoption`,
+      `domains/playwright-visual-review` (opt-in)
 - [ ] `core/performance-budget` — presupuesto de bundle/Lighthouse como skill
       propia (hoy vive disperso entre `vercel-react-best-practices` y
       `ui-visual-craft`)

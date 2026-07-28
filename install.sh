@@ -10,7 +10,8 @@
 #   4. Instala las SKILLS relevantes: core/ (siempre) + la del framework detectado,
 #      más agents/ (roles + subagentes, destino garantizado) y los comandos
 #      /fea:* (best-effort, no bloqueante)
-#   5. Orquesta OpenSpec y Engram (que hacen su propio wiring por-agente)
+#   5. Orquesta OpenSpec y Engram (que hacen su propio wiring por-agente), y
+#      cablea el MCP de Playwright (revisión en vivo — ver ensure_playwright_mcp)
 #
 # Núcleo portable (idéntico en todo agente): skills, agents (roles + subagentes), bloque de AGENTS.md.
 # Capa de adaptadores (lo único agent-specific): DÓNDE va cada cosa.
@@ -162,6 +163,43 @@ ensure_engram() {
   fi
   if confirm "instalar Engram con: $cmd"; then run "$cmd" && ok "Engram instalado"
   else warn "se salta Engram (sin memoria persistente)"; fi
+}
+
+# Playwright MCP no es un binario global a instalar (se sirve vía `npx` bajo
+# demanda) — lo que hace falta es REGISTRARLO como MCP server para "$AGENT".
+# Por eso no sigue el patrón command -v de ensure_openspec/ensure_engram: se
+# llama más abajo, junto al wiring por-agente de OpenSpec/Engram (sección
+# "Orquestar los motores"), no en "Chequeando motores…".
+ensure_playwright_mcp() {
+  case "$AGENT" in
+    claude)
+      if command -v claude >/dev/null 2>&1 && claude mcp list 2>/dev/null | grep -qi '^playwright:'; then
+        ok "Playwright MCP ya registrado en Claude Code"
+      else
+        warn "Playwright MCP no está registrado en Claude Code."
+        if confirm "registrar con: claude mcp add playwright -- npx @playwright/mcp@latest"; then
+          run "claude mcp add playwright -- npx @playwright/mcp@latest"
+          ok "Playwright MCP registrado"
+        else
+          warn "se salta — /fea:review no va a poder abrir un browser real"
+        fi
+      fi
+      ;;
+    cursor)
+      warn "Cursor: agregá manualmente a .cursor/mcp.json (o ~/.cursor/mcp.json):"
+      log '  { "mcpServers": { "playwright": { "command": "npx", "args": ["@playwright/mcp@latest"] } } }'
+      ;;
+    codex)
+      warn "Codex CLI: agregá manualmente a ~/.codex/config.toml:"
+      log '  [mcp_servers.playwright]'
+      log '  command = "npx"'
+      log '  args = ["@playwright/mcp@latest"]'
+      ;;
+    opencode)
+      warn "OpenCode: formato de MCP servers no confirmado en esta versión —"
+      log "  revisá la doc de tu instalación y apuntá el server 'playwright' a: npx @playwright/mcp@latest"
+      ;;
+  esac
 }
 
 # ---------------------------------------------------------------------------
@@ -320,6 +358,9 @@ if command -v engram >/dev/null 2>&1; then
   run "engram setup $(engram_agent_arg "$AGENT")"; ok "Engram cableado (MCP) para $AGENT"
 else warn "Engram ausente: corré 'engram setup $(engram_agent_arg "$AGENT")' cuando lo instales"; fi
 
+step "Cableando revisión con Playwright…"
+ensure_playwright_mcp
+
 # Para Claude: asegurar que CLAUDE.md importe AGENTS.md (sin pisar lo de OpenSpec)
 if [[ "$AGENT" == "claude" && $DRY_RUN -eq 0 ]]; then
   if ! grep -q "@AGENTS.md" "$PROJECT_DIR/CLAUDE.md" 2>/dev/null; then
@@ -329,6 +370,7 @@ fi
 
 step "Listo."
 log "Núcleo portable: skills (core${FRAMEWORKS:+ + ${FRAMEWORKS[*]}}) + agentes (roles + subagentes) + bloque AGENTS.md."
+log "Motores: OpenSpec (workflow) + Engram (memoria) + Playwright MCP (revisión en vivo)."
 [[ ${#DOMAINS[@]} -gt 0 ]] && log "Domains opt-in instalados: ${DOMAINS[*]}."
 log "Solo cambiaron las rutas según el agente — eso es la capa de adaptadores."
 [[ $DRY_RUN -eq 1 ]] && log "(fue un dry-run: no se tocó nada)"

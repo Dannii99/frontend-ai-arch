@@ -30,6 +30,12 @@ opciones disponibles.
      esta sesión, sugerir "Considerá correr `/fea:verify` antes de archivar
      para chequear la implementación contra los artifacts." No bloquear por
      esto.
+   - **Sugerir review (no obligatorio):** si el change tiene superficie de UI
+     observable y `/fea:review` no se corrió en esta sesión, sugerir
+     "Considerá correr `/fea:review` antes de archivar para revisar el
+     change en un browser real (accesibilidad real del DOM, consola,
+     consistencia visual) — `/fea:verify` es solo análisis estático." No
+     bloquear por esto.
 
 3. **Chequear que los artifacts estén completos** —
    `openspec status --change "<nombre>" --json`. Si algún artifact no está

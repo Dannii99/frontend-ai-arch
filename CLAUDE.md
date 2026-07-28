@@ -42,9 +42,10 @@ skills/
   domains/              # opt-in only, never auto-loaded by stack detection (--with <name>)
     conversion-ui/
     next-partial-prefetching-adoption/  # vendored from vercel/next.js canary skills
+    playwright-visual-review/           # live MCP review + persisted e2e generation guidance
 commands/
   fea/                  # Claude Code custom slash-commands, namespace /fea:*
-                        # (plan, execute, test, verify, archive, fix, explore, audit)
+                        # (plan, execute, test, verify, review, archive, fix, explore, audit)
                         # — see "agents/" section
 agents/                 # roles + subagents that consume the skills above (see "agents/" section)
   project-owner.md              # conversational role: pre-technical product scoping
@@ -54,6 +55,7 @@ agents/                 # roles + subagents that consume the skills above (see "
   code-writer.md                # mechanical subagent: used by commands/fea/execute.md, fix.md
   code-auditor.md               # mechanical subagent: used by execute/fix/verify/audit
   test-generator.md             # mechanical subagent: used by commands/fea/test.md
+  visual-reviewer.md            # mechanical subagent: used by commands/fea/review.md (Playwright MCP)
 install.sh              # the only executable logic in the repo
 ```
 
@@ -68,9 +70,10 @@ Every skill decision follows one rule (spelled out in `skills/README.md`):
 
 `skills/domains/` is different from both: opt-in, situational skills (e.g.
 `conversion-ui` applies only to marketing/conversion surfaces; `next-partial-prefetching-adoption`
-only when adopting one specific experimental Next.js feature). `install.sh`
-never auto-loads a domain skill by stack detection — it must be requested
-explicitly via `--with <name>`.
+only when adopting one specific experimental Next.js feature; `playwright-visual-review`
+only when a change has UI surface worth reviewing live or a golden path
+worth locking in as e2e). `install.sh` never auto-loads a domain skill by
+stack detection — it must be requested explicitly via `--with <name>`.
 
 ## The reference-vs-architecture pattern (the core structural idea)
 
@@ -105,6 +108,14 @@ write the hard reference first, then write the architecture skill that cites
 it plus `frontend-clean-code`/`frontend-design-principles`, and make sure
 nothing in the new architecture skill re-teaches syntax the reference already
 owns.
+
+This split is for *framework* folders specifically, not every multi-part
+skill. `skills/domains/playwright-visual-review/` deliberately stays a
+single cohesive `SKILL.md` — Playwright's surface (a handful of MCP browser
+tools + one test runner) is far more contained than an entire framework
+ecosystem, so splitting it into a vendored reference plus a house-opinion
+layer would just be ceremony. Don't force the two-layer pattern onto a skill
+this size.
 
 ## Vendored subtrees
 
@@ -186,7 +197,11 @@ per task rather than directly by a person: `code-writer` (implements),
 `frontend-design-principles`/`accessibility-a11y`/the detected framework's
 architecture skill, runs lint, returns a verdict), `test-generator` (writes
 tests after implementation, from the spec's WHEN/THEN + the real code's
-signatures).
+signatures — including persisted Playwright `.spec.ts` for scenarios the
+architecture skill's testing policy marks "e2e"), `visual-reviewer` (drives
+Playwright MCP against the running app for a live review — accessibility
+tree, screenshots, console — never writes files; see `commands/fea/review.md`
+and `skills/domains/playwright-visual-review/`).
 
 There is no Vue role or `skills/vue/` yet (removed when personas were
 cleaned up, since a role citing skills that don't exist is worse than no
@@ -202,11 +217,18 @@ shouldn't grow one from unrelated work.
 `frontend-architect.md` used to describe the OpenSpec propose/apply/archive
 flow in prose. `commands/fea/*.md` now mechanizes it as Claude Code custom
 slash-commands (namespace `/fea:*`, one per lifecycle step — `plan`,
-`execute`, `test`, `verify`, `archive`, `fix`, `explore`, `audit`), and
-`frontend-architect.md` cites them instead of re-describing the steps. Same
-"cite, don't reimplement" rule that already governs skills applies here.
-`execute.md`/`fix.md` are what actually delegates to the mechanical subagents
-above (`code-writer` → `code-auditor`, `test-generator` via `test.md`).
+`execute`, `test`, `verify`, `review`, `archive`, `fix`, `explore`, `audit`),
+and `frontend-architect.md` cites them instead of re-describing the steps.
+Same "cite, don't reimplement" rule that already governs skills applies
+here. `execute.md`/`fix.md` are what actually delegates to the mechanical
+subagents above (`code-writer` → `code-auditor`, `test-generator` via
+`test.md`, `visual-reviewer` via `review.md`).
+
+`review.md` fills a gap `verify.md` states explicitly: verify is "static
+only — never calls a deployed endpoint or runs curls." `review.md` is the
+live counterpart — it drives a real browser via Playwright MCP against the
+running app. It's suggested (not required) before `archive.md`, same as
+`verify.md` — see `archive.md`'s non-blocking suggestion step.
 
 **Important caveat:** unlike skills (Agent Skills, an open standard this repo
 is built on — see `README.md`) and unlike `agents/` (which has a guaranteed
@@ -226,23 +248,28 @@ ecosystem. Reading it top to bottom explains the whole install flow:
 
 1. Detects package manager (`pnpm-lock.yaml`/`yarn.lock`/`bun.lockb`/default npm) and framework from the target's `package.json`: `@angular/core` → angular; `next` → next; else `react` → react. Next wins over react when both are present (a Next app always depends on `react` too, but `next-conventions` explicitly says not to load `react/` alongside it — see `has_dep` branching in the "Stack" section of the script).
 2. Detects which AI agent binary is installed (`claude`, `cursor`, `codex`, `opencode`); prompts if 0 or 2+ found.
-3. Checks for the two external "engines" this ecosystem depends on — OpenSpec (spec-driven dev workflow) and Engram (persistent memory via MCP) — and offers (never forces) to install missing ones.
-4. Copies `skills/core/` + the detected framework's skill dir (including its vendored reference and any nested `references/` files, since it copies the whole subtree) into the agent's own global skills directory (e.g. `~/.claude/skills`) — never into the target repo. Copies `agents/` (all 7 files — conversational roles + mechanical subagents, see "agents/" above) into the agent's own subagents directory (e.g. `~/.claude/agents`) via `copy_optional_dir()`, with a guaranteed destination for all 4 supported agents. Copies `commands/` into the agent's own commands directory (e.g. `~/.claude/commands`) the same way, but non-blocking: if `commands_dir_for()` returns empty for the detected agent (no known native support), it warns and moves on instead of failing.
-5. Injects the `AGENTS.md` content into the target project's `AGENTS.md` as an idempotent `<!-- FEA:START -->...<!-- FEA:END -->` block, then runs `openspec init --tools "$AGENT"` (first run) or `openspec update` (if `openspec/` already exists — avoids re-running `init --force` over real specs) and `engram setup <agent>`. OpenSpec's tool IDs are identical to this script's own `$AGENT` values, so no mapping function is needed there (unlike `engram_agent_arg()`).
+3. Checks for the external "engines" this ecosystem depends on — OpenSpec (spec-driven dev workflow) and Engram (persistent memory via MCP) — and offers (never forces) to install missing ones.
+4. Copies `skills/core/` + the detected framework's skill dir (including its vendored reference and any nested `references/` files, since it copies the whole subtree) into the agent's own global skills directory (e.g. `~/.claude/skills`) — never into the target repo. Copies `agents/` (all 8 files — conversational roles + mechanical subagents, see "agents/" above) into the agent's own subagents directory (e.g. `~/.claude/agents`) via `copy_optional_dir()`, with a guaranteed destination for all 4 supported agents. Copies `commands/` into the agent's own commands directory (e.g. `~/.claude/commands`) the same way, but non-blocking: if `commands_dir_for()` returns empty for the detected agent (no known native support), it warns and moves on instead of failing.
+5. Injects the `AGENTS.md` content into the target project's `AGENTS.md` as an idempotent `<!-- FEA:START -->...<!-- FEA:END -->` block, then runs `openspec init --tools "$AGENT"` (first run) or `openspec update` (if `openspec/` already exists — avoids re-running `init --force` over real specs), `engram setup <agent>`, and `ensure_playwright_mcp` — a third engine, wired the same way as Engram (per-agent MCP registration, not a global binary check). For `claude` it runs `claude mcp add playwright -- npx @playwright/mcp@latest` (idempotent — checks `claude mcp list` first); for `cursor`/`codex` it prints the manual config snippet (`.cursor/mcp.json` / `~/.codex/config.toml`) since auto-writing those risks corrupting an existing file; for `opencode` it prints a pointer and explicitly flags the exact config format as unconfirmed for that agent — don't treat that hedge as a TODO to silently "fix" without verifying against a real OpenCode install first. OpenSpec's tool IDs are identical to this script's own `$AGENT` values, so no mapping function is needed there (unlike `engram_agent_arg()`).
 
 Key flags: `--project <path>`, `--agent <name>`, `--yes`, `--dry-run`, `--with <domain1,domain2>`.
 
-The agent-specific logic is confined to four small lookup functions —
+The agent-specific logic is mostly confined to four small lookup functions —
 `skills_dir_for()`, `agents_dir_for()`, `commands_dir_for()`, and
 `engram_agent_arg()` — everything else is agent-agnostic. When adding support
 for a new agent, that's where to start. `skills_dir_for()` and
 `agents_dir_for()` both guarantee a real destination for all 4 supported
 agents (`skills_dir_for()` is the one with `exit 1` if the agent itself is
 unsupported); `commands_dir_for()` is the only genuinely best-effort one (see
-"commands/fea/\*" above). Agents are copied wholesale regardless of detected
-framework (an Angular project still gets `frontend-react-next.md` sitting
-unused) — this is intentional simplicity, not a bug; don't "fix" it by
-filtering agents per stack without being asked.
+"commands/fea/\*" above). `ensure_playwright_mcp()` is the one exception to
+"lookup function returns a path" — it does its own per-agent `case` because
+registering an MCP server is an action (a command to run, or a config
+snippet to print), not a directory to resolve; it still lives right next to
+the other adapters and should be extended the same way if a 5th agent is
+added. Agents are copied wholesale regardless of detected framework (an
+Angular project still gets `frontend-react-next.md` sitting unused) — this
+is intentional simplicity, not a bug; don't "fix" it by filtering agents per
+stack without being asked.
 
 ## Two-destination rule
 

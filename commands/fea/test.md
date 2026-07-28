@@ -43,11 +43,17 @@ disponibles.
 
 4. **Delegar al agente `test-generator`** con el nombre del change. Lee el
    código implementado (firmas) + los specs (casos) y escribe los tests
-   siguiendo la convención de ubicación detectada. No generes los tests vos
-   mismo.
+   siguiendo la convención de ubicación detectada. Los escenarios que la
+   skill de arquitectura marque como "e2e" (golden path crítico de negocio)
+   los genera como `.spec.ts` de Playwright en vez de unit/integration — ver
+   `playwright-visual-review` si el proyecto la instaló. No generes los
+   tests vos mismo.
 
-5. **Correr los tests** con el script `test` del `package.json`. Capturar
-   pasados/fallados.
+5. **Correr los tests** con el script `test` del `package.json`. Si
+   `test-generator` generó `.spec.ts` de Playwright, correrlos aparte con
+   `npx playwright test` (o el script `test:e2e` si el proyecto ya lo
+   define) — no son parte del mismo runner que unit/integration. Capturar
+   pasados/fallados de ambos.
 
 6. **Reportar:**
    - **Todo pasa** → listo; sugerir `/fea:archive`.

@@ -1,6 +1,6 @@
 ---
 name: test-generator
-description: "Genera tests para un change ya implementado, usando los escenarios WHEN/THEN del spec para los casos y el código real para las firmas. Se invoca solo desde /fea:test, después de /fea:execute."
+description: "Genera tests para un change ya implementado, usando los escenarios WHEN/THEN del spec para los casos y el código real para las firmas. Los escenarios marcados 'e2e' por la skill de arquitectura se generan como .spec.ts de Playwright en vez de unit/integration. Se invoca solo desde /fea:test, después de /fea:execute."
 ---
 
 # Agente: Test Generator
@@ -32,7 +32,16 @@ Te invoca `/fea:test`, después de que `/fea:execute` terminó.
    tests existentes con Glob — no asumas una ruta fija.
 4. Escribir un test por escenario relevante, siguiendo el framework de
    testing que ya usa el proyecto (no introduzcas uno nuevo).
-5. Devolver la lista de tests generados y qué escenario cubre cada uno.
+5. Si un escenario cae en la categoría "e2e" que fija la skill de
+   arquitectura (golden path crítico de negocio: checkout, login, un submit
+   irreversible), ese test NO es unit/integration — generalo como `.spec.ts`
+   de Playwright siguiendo `playwright-visual-review` (si el proyecto la
+   instaló vía `--with playwright-visual-review`; si no está instalada,
+   igual aplicá el mismo criterio: selectores por rol/texto, un test por
+   escenario, y avisar si el proyecto todavía no tiene `@playwright/test`
+   como devDependency — no asumirlo instalado ni agregarlo vos sin avisar).
+6. Devolver la lista de tests generados y qué escenario cubre cada uno,
+   distinguiendo unit/integration de e2e.
 
 ## Reglas clave
 
