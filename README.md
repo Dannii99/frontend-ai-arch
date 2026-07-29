@@ -179,7 +179,14 @@ proyecto** como bloque idempotente, y orquesta `openspec init`, `engram
 setup` + el pineo de `project_name` de Engram para ese repo, y el registro
 del MCP de Playwright — cada motor hace su propio wiring por-agente y
 por-proyecto donde corresponde. Correrlo de nuevo sobre el mismo proyecto no
-duplica ni rompe nada, solo actualiza.
+duplica ni rompe nada, solo actualiza — incluyendo "Reglas del proyecto": si
+ya la habías completado, esa respuesta se preserva en el reinstall en vez de
+volver a un placeholder; si falta y hay terminal interactiva te la pregunta,
+y si no queda un `<!-- TODO: completar -->` explícito. Además escribe/actualiza
+`.fea/manifest.json` en la raíz del proyecto (commiteable): el commit del
+ecosistema, la fecha, el agente equipado y cada skill instalada con un hash
+de su `SKILL.md` — `/fea:verify` lo usa para avisar (sin bloquear) si el
+proyecto quedó desalineado con lo instalado en la máquina actual.
 
 ### Paso a paso — proyecto nuevo (desde cero)
 
@@ -220,12 +227,12 @@ duplica ni rompe nada, solo actualiza.
 | Comando | Cuándo usarlo |
 |---|---|
 | `/fea:explore` | Pensar en voz alta antes de comprometerte a un enfoque — no implementa nada. |
-| `/fea:plan <nombre>` | Feature nueva o cambio no trivial — crea el change de OpenSpec (proposal, specs, design, tasks). |
+| `/fea:plan <nombre>` | Feature nueva o cambio no trivial — crea el change de OpenSpec (proposal, specs, design, tasks) y numera cada requirement con un `REQ-NNN` estable. |
 | `/fea:execute <nombre>` | Implementa las tasks del plan — loop `code-writer` ⇄ `code-auditor`, con lint/build/test al final. |
-| `/fea:test <nombre>` | Opcional, después de `execute` — genera y corre tests contra el código real. |
-| `/fea:verify <nombre>` | Antes de archivar — chequeo estático del código contra los artifacts (completeness/correctness/coherence). |
+| `/fea:test <nombre>` | Opcional, después de `execute` — genera y corre tests contra el código real, cada uno tagueado `[REQ-NNN]` con el requirement que cubre. |
+| `/fea:verify <nombre>` | Antes de archivar — chequeo estático del código contra los artifacts (completeness/correctness/coherence), drift del manifiesto de skills, y requirements/tests huérfanos de trazabilidad. |
 | `/fea:review <nombre>` | Antes de archivar, si el change tiene UI — revisión en vivo con Playwright MCP (accesibilidad real, visual, consola). |
-| `/fea:archive <nombre>` | Cierra el change — gate de lint, sincroniza specs a `openspec/specs/`. |
+| `/fea:archive <nombre>` | Cierra el change — gates duros de lint y de trazabilidad (todo `REQ-NNN` necesita al menos un test), sincroniza specs a `openspec/specs/`. |
 | `/fea:fix <descripción>` | Bug o tarea chica (≤3 archivos, sin cambios de arquitectura) — sin artifacts de OpenSpec. |
 | `/fea:audit <archivo\|carpeta>` | Auditoría ad-hoc de calidad sobre archivos puntuales, fuera del ciclo de un change. |
 
@@ -243,8 +250,8 @@ el mismo flujo se sigue a mano con el CLI de OpenSpec — ver
   nativos de Claude Code sin equivalente conocido en el resto — ahí
   `install.sh` instala en el mejor esfuerzo y avisa si no hay destino
   conocido, sin bloquear el resto.
-- **Proyecto** (`AGENTS.md`, `openspec/`): conocimiento de ese producto, se
-  commitea y viaja con el repo.
+- **Proyecto** (`AGENTS.md`, `openspec/`, `.fea/manifest.json`): conocimiento
+  de ese producto, se commitea y viaja con el repo.
 
 > **Excepción deliberada:** los archivos que genera `openspec init` dentro del
 > proyecto target (p. ej. `.claude/skills/openspec-*/SKILL.md`,
