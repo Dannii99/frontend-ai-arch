@@ -49,6 +49,33 @@ ya está encapsulado en una skill.
   deploy safety dentro de la skill de arquitectura del framework
   correspondiente (p. ej. `angular-architecture`).
 
+## Precedencia
+
+Ante un conflicto entre fuentes de contexto, este es el orden (de mayor a
+menor autoridad):
+
+1. **Reglas del proyecto** (abajo, en este mismo archivo) — lo que el
+   cliente/equipo pidió explícitamente para ESTE proyecto.
+2. **`docs/project-context.md`** — objetivo, MVP y reglas de negocio del
+   producto, si existe.
+3. **`openspec/specs/`** — specs técnicos canónicos ya aprobados.
+4. **Skill de arquitectura del framework** (`angular-architecture` /
+   `react-architecture` / `next-architecture`) — el criterio de casa para
+   ese stack.
+5. **Skills core** (`frontend-clean-code`, `frontend-design-principles`,
+   `frontend-security`, etc.) — principios agnósticos de framework.
+
+Ante ambigüedad entre dos fuentes del mismo nivel, preferir la más
+específica a este proyecto sobre la más genérica.
+
+Este bloque viene de **frontend-ai-arch (Wordflow)**, un ecosistema
+portable de skills/agentes/comandos instalado sobre este proyecto (no es
+propio de este proyecto). Para reinstalar o actualizar a una versión más
+nueva, correr de nuevo `<ruta-al-repo-de-frontend-ai-arch>/install.sh
+--project <ruta-a-este-proyecto>` — mismo comando que la instalación
+original (ver `.fea/manifest.json`, si existe, para el commit exacto
+instalado).
+
 ## Reglas del proyecto (completar por proyecto)
 
 - Stack: <!-- TODO: completar — ej: Angular 18, TypeScript 5.x -->
