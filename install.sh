@@ -343,10 +343,62 @@ copy_one_domain() {  # $1 = nombre del domain ; $2 = dir destino
 # ---------------------------------------------------------------------------
 # 5. Inyectar bloque de estándares en AGENTS.md (idempotente, sin pisar lo ajeno)
 # ---------------------------------------------------------------------------
+# Los 4 campos de "Reglas del proyecto" se identifican por su prefijo de
+# bullet, no por rango de sección — así no se pisa "### Excepciones a los
+# estándares" (debajo de esos bullets) al hacer splice.
+PROJECT_RULE_FIELDS=("Stack" "Comando de build" "Comando de test" "Convenciones específicas")
+
+# extract_target_rule_value <target> <campo>
+# Devuelve el valor actual de esa línea DENTRO del bloque FEA previo del
+# target, si lo hay (vacío si no hay bloque previo, o no existe esa línea).
+# Se llama ANTES de que inject_agents_block() pise el bloque viejo.
+extract_target_rule_value() {
+  local target="$1" field="$2"
+  [[ -f "$target" ]] || return 0
+  awk -v f="- $field:" '
+    /<!-- FEA:START -->/ { infea=1 }
+    infea && index($0, f) == 1 { sub("^" f " *", ""); print; exit }
+    /<!-- FEA:END -->/ { infea=0 }
+  ' "$target"
+}
+
+# ¿ya está completada esa línea (ni vacía ni un placeholder <!-- ... -->,
+# viejo o nuevo formato)?
+rule_value_is_filled() {
+  local v="$1"
+  [[ -n "$v" && "$v" != *'<!--'* ]]
+}
+
 inject_agents_block() {
   local target="$PROJECT_DIR/AGENTS.md" block; block="$(cat "$ARCH_DIR/AGENTS.md")"
   if [[ $DRY_RUN -eq 1 ]]; then log "[dry-run] inyectaría bloque de estándares en AGENTS.md"; return; fi
   touch "$target"
+
+  # --- Reglas del proyecto: preservar > preguntar > dejar TODO ---
+  local interactive=0
+  [[ $ASSUME_YES -eq 0 && -t 0 ]] && interactive=1
+  local any_preserved=0 any_prompted=0
+  local field val
+  for field in "${PROJECT_RULE_FIELDS[@]}"; do
+    val="$(extract_target_rule_value "$target" "$field")"
+    if rule_value_is_filled "$val"; then
+      any_preserved=1                              # (a) ya estaba completo: preservar
+    elif [[ $interactive -eq 1 ]]; then
+      read -r -p "  ¿$field? (Enter para dejar el TODO): " val
+      [[ -n "$val" ]] && any_prompted=1             # (b) interactivo: preguntar ahora
+    else
+      val=""                                        # (c) no-interactivo: se deja el
+    fi                                               #     placeholder pristino de $block
+    if [[ -n "$val" ]]; then
+      local esc; esc="$(printf '%s' "$val" | sed -e 's/[\/&]/\\&/g')"
+      block="$(printf '%s\n' "$block" | sed -E "s/^- $field: .*/- $field: $esc/")"
+    fi
+  done
+  [[ $any_preserved -eq 1 ]] && ok "Reglas del proyecto: se preservaron respuestas ya cargadas"
+  [[ $any_prompted  -eq 1 ]] && ok "Reglas del proyecto: respuestas nuevas cargadas"
+  [[ $any_preserved -eq 0 && $any_prompted -eq 0 && $interactive -eq 0 ]] && \
+    warn "Reglas del proyecto sin completar — quedan marcadores <!-- TODO: completar --> en AGENTS.md"
+
   # quita un bloque FEA previo si existe
   awk '/<!-- FEA:START -->/{s=1} s!=1{print} /<!-- FEA:END -->/{s=0}' "$target" > "$target.tmp"
   { cat "$target.tmp"; echo; echo "<!-- FEA:START -->"; echo "$block"; echo "<!-- FEA:END -->"; } > "$target"

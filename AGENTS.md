@@ -51,7 +51,17 @@ ya está encapsulado en una skill.
 
 ## Reglas del proyecto (completar por proyecto)
 
-- Stack: <!-- ej: Angular 18, TypeScript 5.x -->
-- Comando de build: <!-- ej: ng build --configuration production -->
-- Comando de test: <!-- ej: npm test -->
-- Convenciones específicas: <!-- lo puntual de este cliente -->
+- Stack: <!-- TODO: completar — ej: Angular 18, TypeScript 5.x -->
+- Comando de build: <!-- TODO: completar — ej: ng build --configuration production -->
+- Comando de test: <!-- TODO: completar — ej: npm test -->
+- Convenciones específicas: <!-- TODO: completar — lo puntual de este cliente -->
+
+### Excepciones a los estándares
+
+Documentá acá cualquier desvío justificado de "Estándares no negociables"
+(arriba) — alcance exacto y motivo. Si no hay excepciones, dejá esta
+sección con el placeholder.
+
+- <!-- ej: excepción de contraste WCAG AA en el ícono de marca del header,
+  motivo: restricción de branding aprobada por diseño — alcance: solo ese
+  ícono, no aplica al resto de la UI -->

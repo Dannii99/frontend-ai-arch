@@ -45,6 +45,13 @@ proyecto sin stack decidido normalmente significa que falta el paso de
    - `openspec/specs/` (specs canónicos existentes)
    - la skill de arquitectura del stack detectado (folder structure, límite
      de escalado de estado, política de testing)
+   - **Chequeo de completitud:** si "Reglas del proyecto" en AGENTS.md
+     todavía tiene marcadores `<!-- TODO: completar` sin resolver, advertir
+     fuerte antes de seguir: "⚠️ AGENTS.md tiene 'Reglas del proyecto' sin
+     completar — el plan se arma sin ese contexto (stack/build/test/
+     convenciones). Recomendado completarlo antes de seguir." No bloquear
+     — es advertencia, no gate (mismo criterio que el resto de este
+     comando: "preferir decisiones razonables antes que bloquear").
 
 3. **Crear el change** — `openspec new change "<nombre>"`.
 
