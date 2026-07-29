@@ -37,14 +37,26 @@ opciones disponibles.
      consistencia visual) — `/fea:verify` es solo análisis estático." No
      bloquear por esto.
 
-3. **Chequear que los artifacts estén completos** —
+3. **Gate de trazabilidad (REQ-ID → test).**
+
+   - Extraer todos los `REQ-NNN` de los specs del change
+     (`openspec/changes/<nombre>/specs/`).
+   - Si ningún requirement tiene REQ-ID (specs pre-convención) → saltear
+     sin bloquear, anotar "sin REQ-IDs (specs pre-convención)".
+   - Si hay REQ-IDs, grepear `\[REQ-NNN\]` en la suite de tests del
+     proyecto. Cualquier REQ-ID del change SIN tag correspondiente →
+     **PARAR**: "Trazabilidad incompleta — faltan tests para: REQ-00X,
+     REQ-00Y. Corré `/fea:test` o cubrilos antes de archivar." Sin bypass
+     — gate duro, igual que lint.
+
+5. **Chequear que los artifacts estén completos** —
    `openspec status --change "<nombre>" --json`. Si algún artifact no está
    `done`, avisar y confirmar antes de seguir.
 
-4. **Chequear que las tasks estén completas** — leer el archivo de tasks;
+6. **Chequear que las tasks estén completas** — leer el archivo de tasks;
    contar `- [ ]` vs `- [x]`. Si quedan tasks incompletas, avisar y confirmar.
 
-5. **Archivar vía el CLI de OpenSpec** (valida, sincroniza los delta specs a
+7. **Archivar vía el CLI de OpenSpec** (valida, sincroniza los delta specs a
    `openspec/specs/`, y mueve el change a `archive/`):
 
    ```bash
@@ -54,7 +66,7 @@ opciones disponibles.
    Si hay delta specs, el CLI los fusiona (ADDED/MODIFIED/REMOVED) en
    `openspec/specs/` y reporta los totales. Revisar el resumen que imprime.
 
-6. **Mostrar resumen**
+8. **Mostrar resumen**
 
    ```
    ## Archive completo
@@ -78,3 +90,6 @@ opciones disponibles.
 - Usar los scripts del `package.json` del proyecto — nunca hardcodear un
   toolchain.
 - No bloquear el archive por advertencias — informar y confirmar.
+- **Nuevo gate duro (además de lint): trazabilidad REQ-ID → test.** Sin
+  bypass — es una escalada deliberada respecto a los gates existentes
+  (antes solo lint bloqueaba).

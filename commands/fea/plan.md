@@ -75,7 +75,20 @@ proyecto sin stack decidido normalmente significa que falta el paso de
 
    Los tests no se generan aquí — ver `/fea:test`.
 
-6. **Mostrar estado final** — `openspec status --change "<nombre>"`.
+6. **Asignar REQ-IDs a los requirements del spec recién creado.**
+   - Escanear (`grep -rEo 'REQ-[0-9]+'`) todas las ocurrencias de
+     `REQ-NNN` en `openspec/specs/**/*.md` (canónicos) Y
+     `openspec/changes/**/*.md` (in-flight, incluye el spec que se acaba
+     de crear) del proyecto.
+   - Tomar el N más alto encontrado (0 si no hay ninguno) y numerar cada
+     `### Requirement:` del spec de este change en orden: N+1, N+2, ...
+   - Reescribir cada header como `### Requirement: REQ-NNN — <nombre
+     original>` — el prefijo `### Requirement:` se mantiene igual (no se
+     toca) para no romper el parseo por prefijo que ya hacen
+     `verify.md`/`test-generator.md`.
+   - No hace falta un archivo contador — es puro escaneo del proyecto.
+
+7. **Mostrar estado final** — `openspec status --change "<nombre>"`.
 
 ## Output
 

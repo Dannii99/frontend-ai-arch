@@ -79,7 +79,21 @@ disponibles.
      change pueden haberse escrito contra una versión anterior de la guía
      de esta skill"). Listar el nombre de cada skill con drift.
 
-10. **Consolidar en UN solo reporte** con scorecard y veredicto.
+10. **Trazabilidad (REQ-ID → test).**
+    - Extraer todos los `REQ-NNN` de `### Requirement: REQ-NNN — <nombre>`
+      en los specs del change.
+    - Si NINGÚN requirement tiene ID (specs previos a esta convención) →
+      anotar "sin REQ-IDs (specs pre-convención)", no bloquear.
+    - Si hay REQ-IDs, grepear `\[REQ-NNN\]` en la suite de tests del
+      proyecto (unit/integration + e2e Playwright si existen).
+    - Requirement con REQ-ID sin ningún `[REQ-NNN]` correspondiente →
+      **ADVERTENCIA** ("sin test: REQ-00X").
+    - Tag `[REQ-NNN]` en algún test que no corresponde a ningún
+      requirement actual del change (huérfano — típico tras reescribir o
+      borrar un requirement) → **ADVERTENCIA** ("tag huérfano: REQ-00Y en
+      <archivo>").
+
+11. **Consolidar en UN solo reporte** con scorecard y veredicto.
 
 ## Formato del reporte
 
@@ -95,6 +109,7 @@ disponibles.
 | Auditor        | ✅ / N críticos        |
 | Contracts      | ok / violaciones / n/a |
 | Manifiesto     | sin drift / N con drift / n/a |
+| Trazabilidad   | K/N reqs con test · J huérfanos / n/a |
 
 ### 🔴 Crítico (arreglar antes de archivar)
 - **[dimensión]** `archivo:línea` — <problema> → <recomendación>
@@ -118,5 +133,7 @@ disponibles.
 - **Usá los scripts del `package.json`** — nunca hardcodees un toolchain.
 - **Preferí falso negativo sobre falso positivo** — ante la duda, bajá
   SUGERENCIA < ADVERTENCIA < CRÍTICO.
+- **Trazabilidad de REQ-ID acá es ADVERTENCIA, nunca CRÍTICO** — el gate
+  duro real vive en `/fea:archive`.
 - **Siguiente paso**: si ✅ → sugerir `/fea:archive`. Si ❌ → listar qué
   arreglar.
