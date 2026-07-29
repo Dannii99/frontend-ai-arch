@@ -110,34 +110,82 @@ distintas con dueños distintos — no se mezclan.
 
 ## Instalación y uso
 
-### Una sola vez — los motores
+### Cómo se corre
+
+Este repo (`frontend-ai-ecosystem/`) se clona **una sola vez**, en cualquier
+carpeta de tu máquina — no vive dentro de tus proyectos. `install.sh` corre
+**apuntando a otro repo**: el proyecto real donde vas a trabajar (uno nuevo o
+uno ya existente). Hay dos formas de apuntarlo, elegí la que te acomode:
+
+**Parado en el proyecto destino** (lo más simple):
+
+```bash
+cd /ruta/a/tu-proyecto
+/ruta/a/frontend-ai-ecosystem/install.sh
+```
+
+Sin `--project`, el instalador asume que el proyecto destino es donde estás
+parado (`$(pwd)`).
+
+**Con `--project`, parado donde sea** (útil si no querés cambiar de
+directorio, o vas a instalar sobre varios proyectos seguidos):
+
+```bash
+/ruta/a/frontend-ai-ecosystem/install.sh --project /ruta/a/tu-proyecto
+```
+
+Reemplazá `/ruta/a/frontend-ai-ecosystem` por donde hayas clonado este repo, y
+`/ruta/a/tu-proyecto` por la raíz del proyecto que querés equipar — las rutas
+de este README son genéricas a propósito, van a ser distintas en tu máquina.
+
+### Flags
+
+| Flag | Qué hace | Cuándo usarla |
+|---|---|---|
+| `--project <ruta>` | Apunta el instalador a un proyecto que no es el directorio actual. | Cuando corrés `install.sh` desde otro lado que no es la raíz del proyecto destino (ver arriba). |
+| `--agent <claude\|cursor\|codex\|opencode>` | Fuerza qué agente equipar, sin autodetección. | Si tenés 2+ agentes instalados (el script pregunta interactivo cuál usar si no se lo decís) o 0, o si corrés en modo no interactivo (CI, script) y no puede haber un prompt colgando. |
+| `--dry-run` | Muestra el plan completo (cada acción prefijada `[dry-run]`) sin tocar nada — ni tu máquina ni el proyecto destino. | Siempre que quieras confirmar qué va a pasar antes de correrlo en real, sobre todo la primera vez en un proyecto o agente nuevo. |
+| `--yes` / `-y` | Responde que sí automáticamente a las confirmaciones (instalar OpenSpec, instalar Engram, etc.) en vez de preguntar una por una. | Terminales no interactivas, o cuando ya sabés que querés todos los motores sin que te frene a preguntar. |
+| `--with <dominio1,dominio2>` | Suma skill(s) opt-in de `skills/domains/` (`conversion-ui`, `next-partial-prefetching-adoption`, `playwright-visual-review`) — ninguna se auto-carga por stack. | Solo si tu proyecto necesita ese dominio puntual (ej. una landing de conversión, o querés e2e con Playwright desde el día uno). |
+
+Ejemplo combinando varias, apuntando a otro proyecto y forzando OpenCode:
+
+```bash
+/ruta/a/frontend-ai-ecosystem/install.sh \
+  --project /ruta/a/tu-proyecto \
+  --agent opencode \
+  --with playwright-visual-review \
+  --dry-run   # sacá esta línea cuando ya confirmaste el plan
+```
+
+### Una sola vez por máquina — los motores
 
 Un agente de IA (Claude Code / Cursor / Codex / OpenCode), OpenSpec
 (`npm i -g @fission-ai/openspec@latest`), Engram
 (`brew install gentleman-programming/tap/engram` o `go install …`) y
 Playwright MCP (se sirve vía `npx @playwright/mcp@latest`, sin instalación
 global). El instalador detecta los tres y ofrece instalar/cablear el que
-falte — no lo fuerza.
+falte — no lo fuerza. Esta parte es **por máquina**, no por proyecto: una vez
+que el agente y los motores están instalados, no hace falta reinstalarlos
+para el próximo proyecto.
 
-```bash
-~/dev/tools/frontend-ai-ecosystem/install.sh          # detecta stack y agente
-~/dev/tools/frontend-ai-ecosystem/install.sh --dry-run # muestra el plan sin tocar
-~/dev/tools/frontend-ai-ecosystem/install.sh --agent cursor --yes
-~/dev/tools/frontend-ai-ecosystem/install.sh --with conversion-ui  # + skill opt-in de domains/
-```
-
-El instalador detecta el framework por `package.json` e instala solo las skills
-relevantes (`core` + framework), coloca skills y agentes en el dir global del
-agente (viajan con vos, no ensucian el repo), inyecta tus estándares en
-`AGENTS.md` como bloque idempotente, y orquesta `openspec init`, `engram setup`
-y el registro del MCP de Playwright para que cada motor haga su propio
-wiring por-agente. Es **idempotente** — correrlo de nuevo sobre el mismo
-proyecto no duplica ni rompe nada, solo actualiza.
+Lo que **sí** corrés por cada proyecto que querés equipar es `install.sh`
+apuntándole a ese proyecto (ver "Cómo se corre" arriba). El instalador
+detecta el framework por `package.json` e instala solo las skills relevantes
+(`core` + framework), coloca skills y agentes en el dir global del agente
+(viajan con vos, no ensucian el repo — se re-copian en cada corrida, pero es
+barato e idempotente), inyecta tus estándares en el `AGENTS.md` **de ese
+proyecto** como bloque idempotente, y orquesta `openspec init`, `engram
+setup` + el pineo de `project_name` de Engram para ese repo, y el registro
+del MCP de Playwright — cada motor hace su propio wiring por-agente y
+por-proyecto donde corresponde. Correrlo de nuevo sobre el mismo proyecto no
+duplica ni rompe nada, solo actualiza.
 
 ### Paso a paso — proyecto nuevo (desde cero)
 
 1. Creá la carpeta del proyecto y parate ahí (`mkdir mi-app && cd mi-app`).
-2. Corré `install.sh`. Todavía no hay `package.json`, así que instala solo
+2. Corré el instalador (ver "Cómo se corre" arriba — sin `--project` porque
+   ya estás parado acá). Todavía no hay `package.json`, así que instala solo
    `core/` + `agents/` + `commands/` + los 3 motores — ningún framework
    todavía, y te lo dice explícitamente.
 3. Hablá con **`project-owner`** (pedile al agente "actuá como
@@ -148,7 +196,7 @@ proyecto no duplica ni rompe nada, solo actualiza.
 5. Scaffoldeá el proyecto real con el CLI del framework elegido —
    `ng new`, `npx create-next-app`, o `npm create vite`. Recién ahí existe
    `package.json`.
-6. **Volvé a correr `install.sh`** (mismo comando que en el paso 2) — ahora
+6. **Volvé a correr el instalador** (mismo comando que en el paso 2) — ahora
    sí detecta el framework e instala su skill de arquitectura
    (`angular-architecture` / `react-architecture` / `next-architecture`).
 7. Arrancá el ciclo: `/fea:plan <nombre-del-cambio>` para la primera feature.
@@ -156,8 +204,9 @@ proyecto no duplica ni rompe nada, solo actualiza.
 ### Paso a paso — proyecto ya existente
 
 1. Parate en la raíz del repo real (el que ya tiene su `package.json`,
-   código, y posiblemente su propio `AGENTS.md`/`CLAUDE.md`).
-2. Corré `install.sh`. Detecta el stack automáticamente, instala solo lo
+   código, y posiblemente su propio `AGENTS.md`/`CLAUDE.md`) — o usá
+   `--project <ruta>` sin moverte de donde estés (ver "Cómo se corre" arriba).
+2. Corré el instalador. Detecta el stack automáticamente, instala solo lo
    relevante, y **no pisa nada tuyo**: el bloque de `AGENTS.md` se inyecta
    entre marcadores idempotentes (`<!-- FEA:START/END -->`) sin tocar el
    resto del archivo, y `openspec` corre `update` en vez de `init` si ya

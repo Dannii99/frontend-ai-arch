@@ -86,7 +86,7 @@ skills_dir_for() {
     claude)   echo "$HOME/.claude/skills" ;;
     cursor)   echo "$PROJECT_DIR/.cursor/skills" ;;      # cursor: a nivel proyecto
     codex)    echo "$HOME/.codex/skills" ;;
-    opencode) echo "$HOME/.config/opencode/skills" ;;    # verificar según tu versión
+    opencode) echo "$HOME/.config/opencode/skills" ;;    # confirmado: opencode.ai/docs/skills
   esac
 }
 # commands/ es best-effort: a diferencia de skills_dir_for() (que es el
@@ -99,7 +99,7 @@ commands_dir_for() {
     claude)   echo "$HOME/.claude/commands" ;;
     cursor)   echo "$HOME/.cursor/commands" ;;           # verificar soporte de custom commands
     codex)    echo "" ;;                                  # sin comandos custom conocidos
-    opencode) echo "$HOME/.config/opencode/command" ;;   # verificar según tu versión
+    opencode) echo "$HOME/.config/opencode/commands" ;;   # confirmado: opencode.ai/docs/commands
   esac
 }
 # agents/ SÍ tiene destino garantizado para los 4 agentes (mismo criterio que
@@ -113,7 +113,7 @@ agents_dir_for() {
     claude)   echo "$HOME/.claude/agents" ;;
     cursor)   echo "$PROJECT_DIR/.cursor/agents" ;;       # verificar soporte nativo de subagents
     codex)    echo "$HOME/.codex/agents" ;;               # sin subagents nativos conocidos — carpeta de referencia
-    opencode) echo "$HOME/.config/opencode/agent" ;;      # verificar según tu versión
+    opencode) echo "$HOME/.config/opencode/agents" ;;     # confirmado: opencode.ai/docs/agents
   esac
 }
 # Nombre que espera 'engram setup <agente>'
@@ -163,6 +163,23 @@ ensure_engram() {
   fi
   if confirm "instalar Engram con: $cmd"; then run "$cmd" && ok "Engram instalado"
   else warn "se salta Engram (sin memoria persistente)"; fi
+}
+
+# Engram guarda todo en una sola SQLite global (un binario, un `engram setup
+# <agente>` por máquina — no por proyecto). Pero cada memoria se etiqueta con
+# un project_name que Engram auto-detecta por el repo git en el que estés
+# parado, así que memorias de proyectos distintos no se mezclan solas. Este
+# archivo "fija" ese nombre para evitar drift si el proyecto se mueve o
+# renombra (ver AGENT-SETUP.md de Engram: "lock write tools to the canonical
+# project"). No depende de que el binario esté instalado — es el archivo que
+# Engram va a leer apenas se use en este repo.
+ensure_engram_project_config() {
+  local cfg="$PROJECT_DIR/.engram/config.json" name; name="$(basename "$PROJECT_DIR")"
+  if [[ -f "$cfg" ]]; then ok "Engram: .engram/config.json ya existe (project_name fijado)"; return; fi
+  if [[ $DRY_RUN -eq 1 ]]; then log "[dry-run] crearía .engram/config.json (project_name=$name)"; return; fi
+  mkdir -p "$PROJECT_DIR/.engram"
+  printf '{\n  "project_name": "%s"\n}\n' "$name" > "$cfg"
+  ok "Engram: .engram/config.json creado (project_name=$name)"
 }
 
 # Playwright MCP no es un binario global a instalar (se sirve vía `npx` bajo
@@ -227,6 +244,37 @@ copy_optional_dir() {  # $1 = dir origen ; $2 = dir destino (puede ser "") ; $3 
   run "mkdir -p '$dst'"
   run "cp -R '$src/.' '$dst/'"
   ok "$label instalados"
+}
+
+# commands/fea/*.md está anidado bajo una subcarpeta (namespacing nativo de
+# Claude Code: /fea:plan). OpenCode NO soporta subcarpetas para comandos
+# (opencode.ai/docs/commands: el nombre de archivo ES el nombre del comando,
+# sin nesting) — mismo motivo por el que OpenSpec instala sus propios
+# comandos como opsx-apply.md (plano, con guion) para opencode en vez de
+# opsx/apply.md (anidado, como sí hace para claude). Por eso comandos/ tiene
+# su propia función en vez de reusar copy_optional_dir.
+copy_commands() {  # $1 = agente
+  local dst; dst="$(commands_dir_for "$1")"
+  [[ -d "$ARCH_DIR/commands/fea" ]] || return 0
+  if [[ -z "$dst" ]]; then
+    warn "comandos /fea:*: sin destino conocido para '$1' — se omite (ver $ARCH_DIR/commands/fea/*.md como referencia)"
+    return 0
+  fi
+  case "$1" in
+    opencode)
+      run "mkdir -p '$dst'"
+      local f
+      for f in "$ARCH_DIR"/commands/fea/*.md; do
+        run "cp '$f' '$dst/fea-$(basename "$f")'"
+      done
+      ok "comandos /fea-* instalados (aplanados para opencode)"
+      ;;
+    *)
+      run "mkdir -p '$dst'"
+      run "cp -R '$ARCH_DIR/commands/.' '$dst/'"
+      ok "comandos /fea:* instalados"
+      ;;
+  esac
 }
 
 list_domains() {  # nombres de domains disponibles (portable, sin xargs)
@@ -323,7 +371,7 @@ elif [[ -n "$(list_domains)" ]]; then
   log "  → incluí con --with <nombre> (ej: --with conversion-ui)"
 fi
 # comandos /fea:*: best-effort, nunca bloquean el install (ver commands_dir_for)
-copy_optional_dir "$ARCH_DIR/commands" "$(commands_dir_for "$AGENT")" "comandos /fea:*"
+copy_commands "$AGENT"
 # agents/ (roles + subagentes mecánicos): destino garantizado, igual que skills
 copy_optional_dir "$ARCH_DIR/agents"   "$(agents_dir_for "$AGENT")"   "agentes"
 
@@ -359,6 +407,7 @@ fi
 if command -v engram >/dev/null 2>&1; then
   run "engram setup $(engram_agent_arg "$AGENT")"; ok "Engram cableado (MCP) para $AGENT"
 else warn "Engram ausente: corré 'engram setup $(engram_agent_arg "$AGENT")' cuando lo instales"; fi
+ensure_engram_project_config
 
 step "Cableando revisión con Playwright…"
 ensure_playwright_mcp
