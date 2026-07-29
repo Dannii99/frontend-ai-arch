@@ -242,13 +242,23 @@ running app. It's suggested (not required) before `archive.md`, same as
 **Important caveat:** unlike skills (Agent Skills, an open standard this repo
 is built on — see `README.md`) and unlike `agents/` (which has a guaranteed
 install destination for all 4 supported agents, see below), custom
-slash-commands are a Claude Code-native mechanism with no equivalent on
-Cursor/Codex/OpenCode. `install.sh` treats `commands/` as a best-effort,
-non-blocking install (see `commands_dir_for()`) — if the detected agent has
-no known destination, it warns and skips instead of failing. The content
-still works as plain reference material for any agent that reads it, even
-without native slash-command support — it just won't be invoked via
-`/fea:plan` syntax.
+slash-commands have no single cross-agent standard, and each agent that does
+support them has its own file convention. `install.sh` treats `commands/` as
+a best-effort, non-blocking install (see `commands_dir_for()`) — if the
+detected agent has no known destination (Codex today), it warns and skips
+instead of failing. For agents that do have a destination, the copy itself is
+agent-aware (`copy_commands()`, not a plain recursive copy): Claude Code
+supports subfolder namespacing, so `commands/fea/*.md` is copied as-is and
+shows up as `/fea:plan`, `/fea:execute`, etc. OpenCode has its own custom
+commands mechanism but — confirmed against `opencode.ai/docs/commands` —
+does **not** support subfolders; the filename alone is the command name. So
+for `opencode`, `copy_commands()` flattens `commands/fea/<name>.md` into
+`fea-<name>.md` (invoked as `/fea-plan`, `/fea-execute`, etc.) — the same
+convention OpenSpec's own installer already uses for its `opsx-*` commands
+when targeting OpenCode. Cursor's subfolder support is still unverified (see
+`commands_dir_for()`'s comment) and falls through to the plain recursive
+copy for now — don't "fix" that without checking a real Cursor install
+first, same caveat this repo already applies elsewhere.
 
 ## install.sh
 
@@ -258,8 +268,8 @@ ecosystem. Reading it top to bottom explains the whole install flow:
 1. Detects package manager (`pnpm-lock.yaml`/`yarn.lock`/`bun.lockb`/default npm) and framework from the target's `package.json`: `@angular/core` → angular; `next` → next; else `react` → react. Next wins over react when both are present (a Next app always depends on `react` too, but `next-architecture` explicitly says not to load `react/` alongside it — see `has_dep` branching in the "Stack" section of the script).
 2. Detects which AI agent binary is installed (`claude`, `cursor`, `codex`, `opencode`); prompts if 0 or 2+ found.
 3. Checks for the external "engines" this ecosystem depends on — OpenSpec (spec-driven dev workflow) and Engram (persistent memory via MCP) — and offers (never forces) to install missing ones.
-4. Copies `skills/core/` + the detected framework's skill dir (including its vendored reference and any nested `references/` files, since it copies the whole subtree) into the agent's own global skills directory (e.g. `~/.claude/skills`) — never into the target repo. Copies `agents/` (all 8 files — conversational roles + mechanical subagents, see "agents/" above) into the agent's own subagents directory (e.g. `~/.claude/agents`) via `copy_optional_dir()`, with a guaranteed destination for all 4 supported agents. Copies `commands/` into the agent's own commands directory (e.g. `~/.claude/commands`) the same way, but non-blocking: if `commands_dir_for()` returns empty for the detected agent (no known native support), it warns and moves on instead of failing.
-5. Injects the `AGENTS.md` content into the target project's `AGENTS.md` as an idempotent `<!-- FEA:START -->...<!-- FEA:END -->` block, then runs `openspec init --tools "$AGENT"` (first run) or `openspec update` (if `openspec/` already exists — avoids re-running `init --force` over real specs), `engram setup <agent>`, and `ensure_playwright_mcp` — a third engine, wired the same way as Engram (per-agent MCP registration, not a global binary check). For `claude` it runs `claude mcp add playwright -- npx @playwright/mcp@latest` (idempotent — checks `claude mcp list` first); for `cursor`/`codex` it prints the manual config snippet (`.cursor/mcp.json` / `~/.codex/config.toml`) since auto-writing those risks corrupting an existing file; for `opencode` it prints a pointer and explicitly flags the exact config format as unconfirmed for that agent — don't treat that hedge as a TODO to silently "fix" without verifying against a real OpenCode install first. OpenSpec's tool IDs are identical to this script's own `$AGENT` values, so no mapping function is needed there (unlike `engram_agent_arg()`).
+4. Copies `skills/core/` + the detected framework's skill dir (including its vendored reference and any nested `references/` files, since it copies the whole subtree) into the agent's own global skills directory (e.g. `~/.claude/skills`) — never into the target repo. Copies `agents/` (all 8 files — conversational roles + mechanical subagents, see "agents/" above) into the agent's own subagents directory (e.g. `~/.claude/agents`) via `copy_optional_dir()`, with a guaranteed destination for all 4 supported agents. Copies `commands/` into the agent's own commands directory (e.g. `~/.claude/commands`) via `copy_commands()` — same guaranteed/best-effort split as `commands_dir_for()`, but agent-aware about file layout (see the "commands/fea/\*" caveat above for the Claude-nested vs. OpenCode-flattened difference).
+5. Injects the `AGENTS.md` content into the target project's `AGENTS.md` as an idempotent `<!-- FEA:START -->...<!-- FEA:END -->` block, then runs `openspec init --tools "$AGENT"` (first run) or `openspec update` (if `openspec/` already exists — avoids re-running `init --force` over real specs), `engram setup <agent>`, `ensure_engram_project_config()`, and `ensure_playwright_mcp` — a third engine, wired the same way as Engram (per-agent MCP registration, not a global binary check). `ensure_engram_project_config()` writes `.engram/config.json` (`{"project_name": "<dir name>"}`) at the target project's root — Engram itself is one global SQLite DB per machine (`engram setup <agent>` is per-agent, not per-project), but it auto-tags each memory with a project name it detects from the enclosing git repo; this file just pins that name so it doesn't drift if the project folder gets moved or renamed later (see Engram's own `AGENT-SETUP.md`). It's idempotent (won't overwrite an existing pinned name) and unconditional — it doesn't require the `engram` binary to be installed yet, since it's only the file Engram will read once it is. For `claude` it runs `claude mcp add playwright -- npx @playwright/mcp@latest` (idempotent — checks `claude mcp list` first); for `cursor`/`codex` it prints the manual config snippet (`.cursor/mcp.json` / `~/.codex/config.toml`) since auto-writing those risks corrupting an existing file; for `opencode` it prints a pointer and explicitly flags the exact config format as unconfirmed for that agent — don't treat that hedge as a TODO to silently "fix" without verifying against a real OpenCode install first. OpenSpec's tool IDs are identical to this script's own `$AGENT` values, so no mapping function is needed there (unlike `engram_agent_arg()`).
 
 Key flags: `--project <path>`, `--agent <name>`, `--yes`, `--dry-run`, `--with <domain1,domain2>`.
 
@@ -270,12 +280,16 @@ for a new agent, that's where to start. `skills_dir_for()` and
 `agents_dir_for()` both guarantee a real destination for all 4 supported
 agents (`skills_dir_for()` is the one with `exit 1` if the agent itself is
 unsupported); `commands_dir_for()` is the only genuinely best-effort one (see
-"commands/fea/\*" above). `ensure_playwright_mcp()` is the one exception to
-"lookup function returns a path" — it does its own per-agent `case` because
-registering an MCP server is an action (a command to run, or a config
-snippet to print), not a directory to resolve; it still lives right next to
-the other adapters and should be extended the same way if a 5th agent is
-added. Agents are copied wholesale regardless of detected framework (an
+"commands/fea/\*" above). `ensure_playwright_mcp()` and `copy_commands()` are
+the two exceptions to "lookup function returns a path" — both do their own
+per-agent `case` because they involve agent-specific behavior beyond
+resolving a destination: `ensure_playwright_mcp()` because registering an MCP
+server is an action (a command to run, or a config snippet to print), not a
+directory; `copy_commands()` because the file layout itself differs by agent
+(Claude's nested `fea/` subfolder vs. OpenCode's flattened `fea-*.md`, see
+above) even though both write to the path `commands_dir_for()` resolves. Both
+still live right next to the other adapters and should be extended the same
+way if a 5th agent is added. Agents are copied wholesale regardless of detected framework (an
 Angular project still gets `frontend-react-next.md` sitting unused) — this
 is intentional simplicity, not a bug; don't "fix" it by filtering agents per
 stack without being asked.
