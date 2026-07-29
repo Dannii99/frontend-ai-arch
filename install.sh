@@ -346,7 +346,7 @@ copy_one_domain() {  # $1 = nombre del domain ; $2 = dir destino
 # Los 4 campos de "Reglas del proyecto" se identifican por su prefijo de
 # bullet, no por rango de sección — así no se pisa "### Excepciones a los
 # estándares" (debajo de esos bullets) al hacer splice.
-PROJECT_RULE_FIELDS=("Stack" "Comando de build" "Comando de test" "Convenciones específicas")
+PROJECT_RULE_FIELDS=("Stack" "Comando de build" "Comando de test" "Convenciones específicas" "Restricciones técnicas")
 
 # extract_target_rule_value <target> <campo>
 # Devuelve el valor actual de esa línea DENTRO del bloque FEA previo del

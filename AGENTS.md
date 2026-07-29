@@ -7,6 +7,13 @@ Copilot y más de forma nativa; Claude Code lo importa vía `CLAUDE.md`).
 > Este archivo es la fuente única de verdad. No dupliques instrucciones en
 > archivos por-agente: apuntalos a este.
 
+> **Qué podés tocar acá:** "Cómo se trabaja aquí", "Estándares no
+> negociables" y "Precedencia" son el núcleo del ecosistema — se
+> regeneran completos en cada `install.sh` (nunca los edites a mano, se
+> pierde en el próximo reinstall). Lo pensado para completar a mano es
+> "Reglas del proyecto" de abajo (stack, comandos, restricciones,
+> excepciones) — eso sí se preserva entre reinstalls.
+
 ## Cómo se trabaja aquí
 
 **Spec-Driven Development (OpenSpec).** Antes de escribir código, se acuerda el
@@ -78,10 +85,16 @@ instalado).
 
 ## Reglas del proyecto (completar por proyecto)
 
+Constitución técnica de ESTE proyecto. La visión de producto y las reglas
+de negocio viven en `docs/project-context.md` (secciones "Propuesta de
+valor" / "Reglas de negocio", si ese archivo existe); los specs técnicos ya
+aprobados viven en `openspec/specs/`. No dupliques ese contenido acá.
+
 - Stack: <!-- TODO: completar — ej: Angular 18, TypeScript 5.x -->
 - Comando de build: <!-- TODO: completar — ej: ng build --configuration production -->
 - Comando de test: <!-- TODO: completar — ej: npm test -->
 - Convenciones específicas: <!-- TODO: completar — lo puntual de este cliente -->
+- Restricciones técnicas: <!-- TODO: completar — ej: debe soportar IE11, sin analytics de terceros, data residency en UE -->
 
 ### Excepciones a los estándares
 
