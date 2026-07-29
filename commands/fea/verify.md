@@ -63,7 +63,23 @@ disponibles.
    datos) contra `contracts.md`. Violación de un contract declarado →
    **CRÍTICO**. Sin artifact `contracts` → saltear sin error.
 
-9. **Consolidar en UN solo reporte** con scorecard y veredicto.
+9. **Manifiesto (drift de skills).** Leer `.fea/manifest.json` en la raíz
+   del proyecto, si existe.
+   - **Sin manifiesto** (proyecto preexistente, instalado antes de esta
+     convención) → saltear sin error: "sin manifiesto, no se puede chequear
+     drift".
+   - **Con manifiesto** → para cada skill listada, resolver su
+     `SKILL.md` actual en el directorio global de skills del agente
+     registrado en el manifiesto (misma convención que `skills_dir_for()`
+     de `install.sh`, ej. `~/.claude/skills/<name>/SKILL.md` — la ruta es
+     plana, no depende del `group` grabado). Recalcular su sha256 y
+     compararlo contra el grabado.
+   - Skill con hash distinto, o `SKILL.md` que ya no existe en esa ruta →
+     **ADVERTENCIA** (nunca CRÍTICO — es informativo: "los specs de este
+     change pueden haberse escrito contra una versión anterior de la guía
+     de esta skill"). Listar el nombre de cada skill con drift.
+
+10. **Consolidar en UN solo reporte** con scorecard y veredicto.
 
 ## Formato del reporte
 
@@ -78,6 +94,7 @@ disponibles.
 | Calidad (lint) | limpio / N issues      |
 | Auditor        | ✅ / N críticos        |
 | Contracts      | ok / violaciones / n/a |
+| Manifiesto     | sin drift / N con drift / n/a |
 
 ### 🔴 Crítico (arreglar antes de archivar)
 - **[dimensión]** `archivo:línea` — <problema> → <recomendación>

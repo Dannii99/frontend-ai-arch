@@ -354,6 +354,78 @@ inject_agents_block() {
   ok "AGENTS.md actualizado (bloque FEA)"
 }
 
+# ---------------------------------------------------------------------------
+# 6. Manifiesto del proyecto (.fea/manifest.json — commiteable, refleja el
+#    último install; a diferencia de ensure_engram_project_config() NO tiene
+#    guard de existencia: se reescribe siempre, para poder diffearse en git
+#    cuando el ecosistema se actualiza.
+# ---------------------------------------------------------------------------
+
+# sha256 portable: probamos sha256sum (linux/git-bash), shasum -a 256 (mac),
+# openssl como último fallback (las tres plataformas soportadas traen al
+# menos una).
+sha256_file() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum   >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
+  else openssl dgst -sha256 "$1" | awk '{print $NF}'
+  fi
+}
+
+# manifest_skill_entries $1=carpeta-grupo (ej: skills/core, skills/react,
+# skills/domains/conversion-ui) $2=etiqueta-grupo (core|<framework>|domain:<n>)
+# Emite entradas JSON (una por línea, sin coma final) por cada SKILL.md
+# encontrado. El hash es SOLO del SKILL.md (el contrato/entry-point), no de
+# subcarpetas vendored como */references/*.md — que esas cambien no debe
+# generar drift-noise en skills que solo las citan.
+manifest_skill_entries() {
+  local src="$1" group="$2" f name h first=1
+  [[ -d "$src" ]] || return 0
+  while IFS= read -r f; do
+    name="$(basename "$(dirname "$f")")"
+    h="$(sha256_file "$f")"
+    [[ $first -eq 0 ]] && printf ',\n'
+    printf '    { "name": "%s", "group": "%s", "sha256": "%s" }' "$name" "$group" "$h"
+    first=0
+  done < <(find "$src" -mindepth 1 -maxdepth 2 -name SKILL.md 2>/dev/null | sort)
+}
+
+# write_fea_manifest: escribe .fea/manifest.json en el TARGET (no en el
+# destino global de skills — respeta la regla de dos destinos). Se llama
+# después de instalar skills/agents/commands, así que FRAMEWORKS/DOMAINS/
+# AGENT ya están resueltos.
+write_fea_manifest() {
+  local out="$PROJECT_DIR/.fea/manifest.json"
+  local commit; commit="$(git -C "$ARCH_DIR" rev-parse HEAD 2>/dev/null || echo unknown)"
+  local date; date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  if [[ $DRY_RUN -eq 1 ]]; then
+    log "[dry-run] escribiría .fea/manifest.json (commit=$commit, agent=$AGENT)"
+    return
+  fi
+  mkdir -p "$PROJECT_DIR/.fea"
+  {
+    echo '{'
+    printf '  "ecosystem_commit": "%s",\n' "$commit"
+    printf '  "installed_at": "%s",\n'      "$date"
+    printf '  "agent": "%s",\n'             "$AGENT"
+    echo '  "skills": ['
+    local entries="" chunk
+    entries="$(manifest_skill_entries "$ARCH_DIR/skills/core" "core")"
+    local fw d
+    for fw in "${FRAMEWORKS[@]}"; do
+      chunk="$(manifest_skill_entries "$ARCH_DIR/skills/$fw" "$fw")"
+      [[ -n "$chunk" ]] && entries+=$',\n'"$chunk"
+    done
+    for d in "${DOMAINS[@]}"; do
+      chunk="$(manifest_skill_entries "$ARCH_DIR/skills/domains/$d" "domain:$d")"
+      [[ -n "$chunk" ]] && entries+=$',\n'"$chunk"
+    done
+    printf '%s\n' "$entries"
+    echo '  ]'
+    echo '}'
+  } > "$out"
+  ok ".fea/manifest.json escrito (commit=$commit, agente=$AGENT)"
+}
+
 # ===========================================================================
 # EJECUCIÓN
 # ===========================================================================
@@ -418,6 +490,10 @@ fi
 copy_commands "$AGENT"
 # agents/ (roles + subagentes mecánicos): destino garantizado, igual que skills
 copy_optional_dir "$ARCH_DIR/agents"   "$(agents_dir_for "$AGENT")"   "agentes"
+
+# --- Manifiesto del proyecto (.fea/manifest.json) ---
+step "Escribiendo manifiesto del proyecto…"
+write_fea_manifest
 
 # --- AGENTS.md canónico (mis estándares, como bloque) ---
 step "Escribiendo estándares en el proyecto…"
