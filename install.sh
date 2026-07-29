@@ -132,7 +132,9 @@ detect_agents() {
 # ---------------------------------------------------------------------------
 # 3. Motores: chequear y ofrecer instalar
 # ---------------------------------------------------------------------------
-os_kind() { case "$(uname -s)" in Darwin) echo mac ;; Linux) echo linux ;; *) echo other ;; esac; }
+os_kind() { case "$(uname -s)" in Darwin) echo mac ;; Linux) echo linux ;; MINGW*|MSYS*|CYGWIN*) echo windows ;; *) echo other ;; esac; }
+# Arquitectura en el vocabulario de los releases de Engram (amd64/arm64)
+arch_kind() { case "$(uname -m)" in x86_64|amd64) echo amd64 ;; arm64|aarch64) echo arm64 ;; *) echo "" ;; esac; }
 
 ensure_openspec() {
   command -v openspec >/dev/null 2>&1 && { ok "OpenSpec ya instalado"; return; }
@@ -157,12 +159,54 @@ ensure_engram() {
     cmd="go install github.com/Gentleman-Programming/engram/cmd/engram@latest"
   fi
   warn "Engram no está instalado."
-  if [[ -z "$cmd" ]]; then
-    warn "no encontré brew ni go. Instalá el binario desde: https://github.com/Gentleman-Programming/engram/releases"
+  if [[ -n "$cmd" ]]; then
+    if confirm "instalar Engram con: $cmd"; then run "$cmd" && ok "Engram instalado"
+    else warn "se salta Engram (sin memoria persistente)"; fi
     return
   fi
-  if confirm "instalar Engram con: $cmd"; then run "$cmd" && ok "Engram instalado"
-  else warn "se salta Engram (sin memoria persistente)"; fi
+  # Sin brew ni go: fallback a bajar el binario pre-compilado de GitHub
+  # Releases para tu OS/arch y dejarlo en ~/.local/bin (mismo directorio que
+  # ya usan otros binarios de este flujo, p. ej. el de Claude Code).
+  if confirm "no encontré brew ni go — ¿instalar Engram descargando el binario de GitHub Releases a \$HOME/.local/bin?"; then
+    if install_engram_from_release; then ok "Engram instalado en \$HOME/.local/bin"
+    else warn "no pude resolver/instalar un binario para tu OS/arch automáticamente. Si ya se descargó, revisá que \$HOME/.local/bin esté en tu PATH; si no, instalalo a mano desde: https://github.com/Gentleman-Programming/engram/releases"; fi
+  else
+    warn "se salta Engram (sin memoria persistente). Alternativa manual: https://github.com/Gentleman-Programming/engram/releases"
+  fi
+}
+
+# Resuelve, sin depender de jq, la URL del asset de la última release de
+# Engram que matchea <os>_<arch>.<ext> (zip en windows, tar.gz en mac/linux).
+# Buscar por patrón en vez de reconstruir el nombre a mano evita romperse si
+# el formato de versión del asset cambia.
+engram_release_asset_url() {
+  local os="$1" arch="$2" ext pattern
+  case "$os" in
+    windows) ext="zip" ;;
+    *)       ext="tar.gz" ;;
+  esac
+  pattern="${os}_${arch}\\.${ext}"
+  curl -fsSL "https://api.github.com/repos/Gentleman-Programming/engram/releases/latest" 2>/dev/null \
+    | grep -o "https://github.com/Gentleman-Programming/engram/releases/download/[^\"]*${pattern}" \
+    | head -1
+}
+
+install_engram_from_release() {
+  local os arch url tmp
+  os="$(os_kind)"; arch="$(arch_kind)"
+  if [[ "$os" == "other" || -z "$arch" ]]; then return 1; fi
+  url="$(engram_release_asset_url "$os" "$arch")"
+  [[ -n "$url" ]] || return 1
+  tmp="$(mktemp -d)"
+  run "mkdir -p '$HOME/.local/bin'"
+  if [[ "$os" == "windows" ]]; then
+    run "curl -fsSL '$url' -o '$tmp/engram.zip' && unzip -oq '$tmp/engram.zip' -d '$tmp' && mv -f '$tmp/engram.exe' '$HOME/.local/bin/engram.exe'"
+  else
+    run "curl -fsSL '$url' -o '$tmp/engram.tar.gz' && tar -xzf '$tmp/engram.tar.gz' -C '$tmp' && chmod +x '$tmp/engram' && mv -f '$tmp/engram' '$HOME/.local/bin/engram'"
+  fi
+  rm -rf "$tmp" 2>/dev/null || true
+  [[ $DRY_RUN -eq 1 ]] && return 0
+  command -v engram >/dev/null 2>&1
 }
 
 # Engram guarda todo en una sola SQLite global (un binario, un `engram setup
@@ -422,6 +466,6 @@ fi
 step "Listo."
 log "Núcleo portable: skills (core${FRAMEWORKS:+ + ${FRAMEWORKS[*]}}) + agentes (roles + subagentes) + bloque AGENTS.md."
 log "Motores: OpenSpec (workflow) + Engram (memoria) + Playwright MCP (revisión en vivo)."
-[[ ${#DOMAINS[@]} -gt 0 ]] && log "Domains opt-in instalados: ${DOMAINS[*]}."
+[[ ${#DOMAINS[@]} -gt 0 ]] && log "Domains opt-in instalados: ${DOMAINS[*]}." || true
 log "Solo cambiaron las rutas según el agente — eso es la capa de adaptadores."
-[[ $DRY_RUN -eq 1 ]] && log "(fue un dry-run: no se tocó nada)"
+[[ $DRY_RUN -eq 1 ]] && log "(fue un dry-run: no se tocó nada)" || true
