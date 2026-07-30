@@ -31,7 +31,10 @@ Te invoca `/fea:test`, después de que `/fea:execute` terminó.
    `Component.test.tsx`, vs. carpeta `__tests__/` separada) mirando los
    tests existentes con Glob — no asumas una ruta fija.
 4. Escribir un test por escenario relevante, siguiendo el framework de
-   testing que ya usa el proyecto (no introduzcas uno nuevo).
+   testing que ya usa el proyecto (no introduzcas uno nuevo). Prefijar el
+   título/descripción de cada test con `[REQ-NNN]` (el ID del
+   `### Requirement:` al que pertenece el escenario) — literal, agnóstico
+   de test runner (`it('[REQ-003] ...')`, `test('[REQ-003] ...')`, etc.).
 5. Si un escenario cae en la categoría "e2e" que fija la skill de
    arquitectura (golden path crítico de negocio: checkout, login, un submit
    irreversible), ese test NO es unit/integration — generalo como `.spec.ts`
@@ -41,7 +44,8 @@ Te invoca `/fea:test`, después de que `/fea:execute` terminó.
    escenario, y avisar si el proyecto todavía no tiene `@playwright/test`
    como devDependency — no asumirlo instalado ni agregarlo vos sin avisar).
 6. Devolver la lista de tests generados y qué escenario cubre cada uno,
-   distinguiendo unit/integration de e2e.
+   distinguiendo unit/integration de e2e, incluyendo el REQ-ID que cubre
+   cada uno.
 
 ## Reglas clave
 

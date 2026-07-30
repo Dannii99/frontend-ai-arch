@@ -132,7 +132,9 @@ detect_agents() {
 # ---------------------------------------------------------------------------
 # 3. Motores: chequear y ofrecer instalar
 # ---------------------------------------------------------------------------
-os_kind() { case "$(uname -s)" in Darwin) echo mac ;; Linux) echo linux ;; *) echo other ;; esac; }
+os_kind() { case "$(uname -s)" in Darwin) echo mac ;; Linux) echo linux ;; MINGW*|MSYS*|CYGWIN*) echo windows ;; *) echo other ;; esac; }
+# Arquitectura en el vocabulario de los releases de Engram (amd64/arm64)
+arch_kind() { case "$(uname -m)" in x86_64|amd64) echo amd64 ;; arm64|aarch64) echo arm64 ;; *) echo "" ;; esac; }
 
 ensure_openspec() {
   command -v openspec >/dev/null 2>&1 && { ok "OpenSpec ya instalado"; return; }
@@ -157,12 +159,54 @@ ensure_engram() {
     cmd="go install github.com/Gentleman-Programming/engram/cmd/engram@latest"
   fi
   warn "Engram no está instalado."
-  if [[ -z "$cmd" ]]; then
-    warn "no encontré brew ni go. Instalá el binario desde: https://github.com/Gentleman-Programming/engram/releases"
+  if [[ -n "$cmd" ]]; then
+    if confirm "instalar Engram con: $cmd"; then run "$cmd" && ok "Engram instalado"
+    else warn "se salta Engram (sin memoria persistente)"; fi
     return
   fi
-  if confirm "instalar Engram con: $cmd"; then run "$cmd" && ok "Engram instalado"
-  else warn "se salta Engram (sin memoria persistente)"; fi
+  # Sin brew ni go: fallback a bajar el binario pre-compilado de GitHub
+  # Releases para tu OS/arch y dejarlo en ~/.local/bin (mismo directorio que
+  # ya usan otros binarios de este flujo, p. ej. el de Claude Code).
+  if confirm "no encontré brew ni go — ¿instalar Engram descargando el binario de GitHub Releases a \$HOME/.local/bin?"; then
+    if install_engram_from_release; then ok "Engram instalado en \$HOME/.local/bin"
+    else warn "no pude resolver/instalar un binario para tu OS/arch automáticamente. Si ya se descargó, revisá que \$HOME/.local/bin esté en tu PATH; si no, instalalo a mano desde: https://github.com/Gentleman-Programming/engram/releases"; fi
+  else
+    warn "se salta Engram (sin memoria persistente). Alternativa manual: https://github.com/Gentleman-Programming/engram/releases"
+  fi
+}
+
+# Resuelve, sin depender de jq, la URL del asset de la última release de
+# Engram que matchea <os>_<arch>.<ext> (zip en windows, tar.gz en mac/linux).
+# Buscar por patrón en vez de reconstruir el nombre a mano evita romperse si
+# el formato de versión del asset cambia.
+engram_release_asset_url() {
+  local os="$1" arch="$2" ext pattern
+  case "$os" in
+    windows) ext="zip" ;;
+    *)       ext="tar.gz" ;;
+  esac
+  pattern="${os}_${arch}\\.${ext}"
+  curl -fsSL "https://api.github.com/repos/Gentleman-Programming/engram/releases/latest" 2>/dev/null \
+    | grep -o "https://github.com/Gentleman-Programming/engram/releases/download/[^\"]*${pattern}" \
+    | head -1
+}
+
+install_engram_from_release() {
+  local os arch url tmp
+  os="$(os_kind)"; arch="$(arch_kind)"
+  if [[ "$os" == "other" || -z "$arch" ]]; then return 1; fi
+  url="$(engram_release_asset_url "$os" "$arch")"
+  [[ -n "$url" ]] || return 1
+  tmp="$(mktemp -d)"
+  run "mkdir -p '$HOME/.local/bin'"
+  if [[ "$os" == "windows" ]]; then
+    run "curl -fsSL '$url' -o '$tmp/engram.zip' && unzip -oq '$tmp/engram.zip' -d '$tmp' && mv -f '$tmp/engram.exe' '$HOME/.local/bin/engram.exe'"
+  else
+    run "curl -fsSL '$url' -o '$tmp/engram.tar.gz' && tar -xzf '$tmp/engram.tar.gz' -C '$tmp' && chmod +x '$tmp/engram' && mv -f '$tmp/engram' '$HOME/.local/bin/engram'"
+  fi
+  rm -rf "$tmp" 2>/dev/null || true
+  [[ $DRY_RUN -eq 1 ]] && return 0
+  command -v engram >/dev/null 2>&1
 }
 
 # Engram guarda todo en una sola SQLite global (un binario, un `engram setup
@@ -299,15 +343,139 @@ copy_one_domain() {  # $1 = nombre del domain ; $2 = dir destino
 # ---------------------------------------------------------------------------
 # 5. Inyectar bloque de estándares en AGENTS.md (idempotente, sin pisar lo ajeno)
 # ---------------------------------------------------------------------------
+# Los 4 campos de "Reglas del proyecto" se identifican por su prefijo de
+# bullet, no por rango de sección — así no se pisa "### Excepciones a los
+# estándares" (debajo de esos bullets) al hacer splice.
+PROJECT_RULE_FIELDS=("Stack" "Comando de build" "Comando de test" "Convenciones específicas" "Restricciones técnicas")
+
+# extract_target_rule_value <target> <campo>
+# Devuelve el valor actual de esa línea DENTRO del bloque FEA previo del
+# target, si lo hay (vacío si no hay bloque previo, o no existe esa línea).
+# Se llama ANTES de que inject_agents_block() pise el bloque viejo.
+extract_target_rule_value() {
+  local target="$1" field="$2"
+  [[ -f "$target" ]] || return 0
+  awk -v f="- $field:" '
+    /<!-- FEA:START -->/ { infea=1 }
+    infea && index($0, f) == 1 { sub("^" f " *", ""); print; exit }
+    /<!-- FEA:END -->/ { infea=0 }
+  ' "$target"
+}
+
+# ¿ya está completada esa línea (ni vacía ni un placeholder <!-- ... -->,
+# viejo o nuevo formato)?
+rule_value_is_filled() {
+  local v="$1"
+  [[ -n "$v" && "$v" != *'<!--'* ]]
+}
+
 inject_agents_block() {
   local target="$PROJECT_DIR/AGENTS.md" block; block="$(cat "$ARCH_DIR/AGENTS.md")"
   if [[ $DRY_RUN -eq 1 ]]; then log "[dry-run] inyectaría bloque de estándares en AGENTS.md"; return; fi
   touch "$target"
+
+  # --- Reglas del proyecto: preservar > preguntar > dejar TODO ---
+  local interactive=0
+  [[ $ASSUME_YES -eq 0 && -t 0 ]] && interactive=1
+  local any_preserved=0 any_prompted=0
+  local field val
+  for field in "${PROJECT_RULE_FIELDS[@]}"; do
+    val="$(extract_target_rule_value "$target" "$field")"
+    if rule_value_is_filled "$val"; then
+      any_preserved=1                              # (a) ya estaba completo: preservar
+    elif [[ $interactive -eq 1 ]]; then
+      read -r -p "  ¿$field? (Enter para dejar el TODO): " val
+      [[ -n "$val" ]] && any_prompted=1             # (b) interactivo: preguntar ahora
+    else
+      val=""                                        # (c) no-interactivo: se deja el
+    fi                                               #     placeholder pristino de $block
+    if [[ -n "$val" ]]; then
+      local esc; esc="$(printf '%s' "$val" | sed -e 's/[\/&]/\\&/g')"
+      block="$(printf '%s\n' "$block" | sed -E "s/^- $field: .*/- $field: $esc/")"
+    fi
+  done
+  [[ $any_preserved -eq 1 ]] && ok "Reglas del proyecto: se preservaron respuestas ya cargadas"
+  [[ $any_prompted  -eq 1 ]] && ok "Reglas del proyecto: respuestas nuevas cargadas"
+  [[ $any_preserved -eq 0 && $any_prompted -eq 0 && $interactive -eq 0 ]] && \
+    warn "Reglas del proyecto sin completar — quedan marcadores <!-- TODO: completar --> en AGENTS.md"
+
   # quita un bloque FEA previo si existe
   awk '/<!-- FEA:START -->/{s=1} s!=1{print} /<!-- FEA:END -->/{s=0}' "$target" > "$target.tmp"
   { cat "$target.tmp"; echo; echo "<!-- FEA:START -->"; echo "$block"; echo "<!-- FEA:END -->"; } > "$target"
   rm -f "$target.tmp"
   ok "AGENTS.md actualizado (bloque FEA)"
+}
+
+# ---------------------------------------------------------------------------
+# 6. Manifiesto del proyecto (.fea/manifest.json — commiteable, refleja el
+#    último install; a diferencia de ensure_engram_project_config() NO tiene
+#    guard de existencia: se reescribe siempre, para poder diffearse en git
+#    cuando el ecosistema se actualiza.
+# ---------------------------------------------------------------------------
+
+# sha256 portable: probamos sha256sum (linux/git-bash), shasum -a 256 (mac),
+# openssl como último fallback (las tres plataformas soportadas traen al
+# menos una).
+sha256_file() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum   >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
+  else openssl dgst -sha256 "$1" | awk '{print $NF}'
+  fi
+}
+
+# manifest_skill_entries $1=carpeta-grupo (ej: skills/core, skills/react,
+# skills/domains/conversion-ui) $2=etiqueta-grupo (core|<framework>|domain:<n>)
+# Emite entradas JSON (una por línea, sin coma final) por cada SKILL.md
+# encontrado. El hash es SOLO del SKILL.md (el contrato/entry-point), no de
+# subcarpetas vendored como */references/*.md — que esas cambien no debe
+# generar drift-noise en skills que solo las citan.
+manifest_skill_entries() {
+  local src="$1" group="$2" f name h first=1
+  [[ -d "$src" ]] || return 0
+  while IFS= read -r f; do
+    name="$(basename "$(dirname "$f")")"
+    h="$(sha256_file "$f")"
+    [[ $first -eq 0 ]] && printf ',\n'
+    printf '    { "name": "%s", "group": "%s", "sha256": "%s" }' "$name" "$group" "$h"
+    first=0
+  done < <(find "$src" -mindepth 1 -maxdepth 2 -name SKILL.md 2>/dev/null | sort)
+}
+
+# write_fea_manifest: escribe .fea/manifest.json en el TARGET (no en el
+# destino global de skills — respeta la regla de dos destinos). Se llama
+# después de instalar skills/agents/commands, así que FRAMEWORKS/DOMAINS/
+# AGENT ya están resueltos.
+write_fea_manifest() {
+  local out="$PROJECT_DIR/.fea/manifest.json"
+  local commit; commit="$(git -C "$ARCH_DIR" rev-parse HEAD 2>/dev/null || echo unknown)"
+  local date; date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  if [[ $DRY_RUN -eq 1 ]]; then
+    log "[dry-run] escribiría .fea/manifest.json (commit=$commit, agent=$AGENT)"
+    return
+  fi
+  mkdir -p "$PROJECT_DIR/.fea"
+  {
+    echo '{'
+    printf '  "ecosystem_commit": "%s",\n' "$commit"
+    printf '  "installed_at": "%s",\n'      "$date"
+    printf '  "agent": "%s",\n'             "$AGENT"
+    echo '  "skills": ['
+    local entries="" chunk
+    entries="$(manifest_skill_entries "$ARCH_DIR/skills/core" "core")"
+    local fw d
+    for fw in "${FRAMEWORKS[@]}"; do
+      chunk="$(manifest_skill_entries "$ARCH_DIR/skills/$fw" "$fw")"
+      [[ -n "$chunk" ]] && entries+=$',\n'"$chunk"
+    done
+    for d in "${DOMAINS[@]}"; do
+      chunk="$(manifest_skill_entries "$ARCH_DIR/skills/domains/$d" "domain:$d")"
+      [[ -n "$chunk" ]] && entries+=$',\n'"$chunk"
+    done
+    printf '%s\n' "$entries"
+    echo '  ]'
+    echo '}'
+  } > "$out"
+  ok ".fea/manifest.json escrito (commit=$commit, agente=$AGENT)"
 }
 
 # ===========================================================================
@@ -375,6 +543,10 @@ copy_commands "$AGENT"
 # agents/ (roles + subagentes mecánicos): destino garantizado, igual que skills
 copy_optional_dir "$ARCH_DIR/agents"   "$(agents_dir_for "$AGENT")"   "agentes"
 
+# --- Manifiesto del proyecto (.fea/manifest.json) ---
+step "Escribiendo manifiesto del proyecto…"
+write_fea_manifest
+
 # --- AGENTS.md canónico (mis estándares, como bloque) ---
 step "Escribiendo estándares en el proyecto…"
 inject_agents_block
@@ -422,6 +594,6 @@ fi
 step "Listo."
 log "Núcleo portable: skills (core${FRAMEWORKS:+ + ${FRAMEWORKS[*]}}) + agentes (roles + subagentes) + bloque AGENTS.md."
 log "Motores: OpenSpec (workflow) + Engram (memoria) + Playwright MCP (revisión en vivo)."
-[[ ${#DOMAINS[@]} -gt 0 ]] && log "Domains opt-in instalados: ${DOMAINS[*]}."
+[[ ${#DOMAINS[@]} -gt 0 ]] && log "Domains opt-in instalados: ${DOMAINS[*]}." || true
 log "Solo cambiaron las rutas según el agente — eso es la capa de adaptadores."
-[[ $DRY_RUN -eq 1 ]] && log "(fue un dry-run: no se tocó nada)"
+[[ $DRY_RUN -eq 1 ]] && log "(fue un dry-run: no se tocó nada)" || true

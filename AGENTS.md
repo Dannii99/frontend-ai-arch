@@ -7,6 +7,13 @@ Copilot y más de forma nativa; Claude Code lo importa vía `CLAUDE.md`).
 > Este archivo es la fuente única de verdad. No dupliques instrucciones en
 > archivos por-agente: apuntalos a este.
 
+> **Qué podés tocar acá:** "Cómo se trabaja aquí", "Estándares no
+> negociables" y "Precedencia" son el núcleo del ecosistema — se
+> regeneran completos en cada `install.sh` (nunca los edites a mano, se
+> pierde en el próximo reinstall). Lo pensado para completar a mano es
+> "Reglas del proyecto" de abajo (stack, comandos, restricciones,
+> excepciones) — eso sí se preserva entre reinstalls.
+
 ## Cómo se trabaja aquí
 
 **Spec-Driven Development (OpenSpec).** Antes de escribir código, se acuerda el
@@ -49,9 +56,52 @@ ya está encapsulado en una skill.
   deploy safety dentro de la skill de arquitectura del framework
   correspondiente (p. ej. `angular-architecture`).
 
+## Precedencia
+
+Ante un conflicto entre fuentes de contexto, este es el orden (de mayor a
+menor autoridad):
+
+1. **Reglas del proyecto** (abajo, en este mismo archivo) — lo que el
+   cliente/equipo pidió explícitamente para ESTE proyecto.
+2. **`docs/project-context.md`** — objetivo, MVP y reglas de negocio del
+   producto, si existe.
+3. **`openspec/specs/`** — specs técnicos canónicos ya aprobados.
+4. **Skill de arquitectura del framework** (`angular-architecture` /
+   `react-architecture` / `next-architecture`) — el criterio de casa para
+   ese stack.
+5. **Skills core** (`frontend-clean-code`, `frontend-design-principles`,
+   `frontend-security`, etc.) — principios agnósticos de framework.
+
+Ante ambigüedad entre dos fuentes del mismo nivel, preferir la más
+específica a este proyecto sobre la más genérica.
+
+Este bloque viene de **frontend-ai-arch (Wordflow)**, un ecosistema
+portable de skills/agentes/comandos instalado sobre este proyecto (no es
+propio de este proyecto). Para reinstalar o actualizar a una versión más
+nueva, correr de nuevo `<ruta-al-repo-de-frontend-ai-arch>/install.sh
+--project <ruta-a-este-proyecto>` — mismo comando que la instalación
+original (ver `.fea/manifest.json`, si existe, para el commit exacto
+instalado).
+
 ## Reglas del proyecto (completar por proyecto)
 
-- Stack: <!-- ej: Angular 18, TypeScript 5.x -->
-- Comando de build: <!-- ej: ng build --configuration production -->
-- Comando de test: <!-- ej: npm test -->
-- Convenciones específicas: <!-- lo puntual de este cliente -->
+Constitución técnica de ESTE proyecto. La visión de producto y las reglas
+de negocio viven en `docs/project-context.md` (secciones "Propuesta de
+valor" / "Reglas de negocio", si ese archivo existe); los specs técnicos ya
+aprobados viven en `openspec/specs/`. No dupliques ese contenido acá.
+
+- Stack: <!-- TODO: completar — ej: Angular 18, TypeScript 5.x -->
+- Comando de build: <!-- TODO: completar — ej: ng build --configuration production -->
+- Comando de test: <!-- TODO: completar — ej: npm test -->
+- Convenciones específicas: <!-- TODO: completar — lo puntual de este cliente -->
+- Restricciones técnicas: <!-- TODO: completar — ej: debe soportar IE11, sin analytics de terceros, data residency en UE -->
+
+### Excepciones a los estándares
+
+Documentá acá cualquier desvío justificado de "Estándares no negociables"
+(arriba) — alcance exacto y motivo. Si no hay excepciones, dejá esta
+sección con el placeholder.
+
+- <!-- ej: excepción de contraste WCAG AA en el ícono de marca del header,
+  motivo: restricción de branding aprobada por diseño — alcance: solo ese
+  ícono, no aplica al resto de la UI -->

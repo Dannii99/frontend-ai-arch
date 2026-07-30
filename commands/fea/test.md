@@ -32,6 +32,8 @@ disponibles.
 3. **Cargar contexto para `test-generator`:**
    - Los specs del change (`openspec/changes/<nombre>/specs/`) — los
      escenarios WHEN/THEN definen los casos a cubrir.
+   - Los REQ-IDs de cada `### Requirement: REQ-NNN — <nombre>` del spec —
+     se usan para taggear cada test generado.
    - El código implementado — las firmas reales que los tests deben invocar.
    - La sección de testing de la skill de arquitectura del stack detectado
      (`angular-architecture` / `react-architecture` / `next-architecture`):
@@ -47,7 +49,10 @@ disponibles.
    skill de arquitectura marque como "e2e" (golden path crítico de negocio)
    los genera como `.spec.ts` de Playwright en vez de unit/integration — ver
    `playwright-visual-review` si el proyecto la instaló. No generes los
-   tests vos mismo.
+   tests vos mismo. Cada test generado lleva un prefijo literal `[REQ-NNN]`
+   en su título/descripción (el ID del requirement que cubre) — agnóstico
+   de framework de testing, para poder grepearlo en el output del test
+   runner sin depender de la ubicación del archivo.
 
 5. **Correr los tests** con el script `test` del `package.json`. Si
    `test-generator` generó `.spec.ts` de Playwright, correrlos aparte con

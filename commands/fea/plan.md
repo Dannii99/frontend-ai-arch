@@ -45,6 +45,13 @@ proyecto sin stack decidido normalmente significa que falta el paso de
    - `openspec/specs/` (specs canónicos existentes)
    - la skill de arquitectura del stack detectado (folder structure, límite
      de escalado de estado, política de testing)
+   - **Chequeo de completitud:** si "Reglas del proyecto" en AGENTS.md
+     todavía tiene marcadores `<!-- TODO: completar` sin resolver, advertir
+     fuerte antes de seguir: "⚠️ AGENTS.md tiene 'Reglas del proyecto' sin
+     completar — el plan se arma sin ese contexto (stack/build/test/
+     convenciones). Recomendado completarlo antes de seguir." No bloquear
+     — es advertencia, no gate (mismo criterio que el resto de este
+     comando: "preferir decisiones razonables antes que bloquear").
 
 3. **Crear el change** — `openspec new change "<nombre>"`.
 
@@ -68,7 +75,20 @@ proyecto sin stack decidido normalmente significa que falta el paso de
 
    Los tests no se generan aquí — ver `/fea:test`.
 
-6. **Mostrar estado final** — `openspec status --change "<nombre>"`.
+6. **Asignar REQ-IDs a los requirements del spec recién creado.**
+   - Escanear (`grep -rEo 'REQ-[0-9]+'`) todas las ocurrencias de
+     `REQ-NNN` en `openspec/specs/**/*.md` (canónicos) Y
+     `openspec/changes/**/*.md` (in-flight, incluye el spec que se acaba
+     de crear) del proyecto.
+   - Tomar el N más alto encontrado (0 si no hay ninguno) y numerar cada
+     `### Requirement:` del spec de este change en orden: N+1, N+2, ...
+   - Reescribir cada header como `### Requirement: REQ-NNN — <nombre
+     original>` — el prefijo `### Requirement:` se mantiene igual (no se
+     toca) para no romper el parseo por prefijo que ya hacen
+     `verify.md`/`test-generator.md`.
+   - No hace falta un archivo contador — es puro escaneo del proyecto.
+
+7. **Mostrar estado final** — `openspec status --change "<nombre>"`.
 
 ## Output
 
