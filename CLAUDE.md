@@ -46,14 +46,14 @@ skills/
     playwright-visual-review/           # live MCP review + persisted e2e generation guidance
 commands/
   fea/                  # Claude Code custom slash-commands, namespace /fea:*
-                        # (plan, execute, test, verify, review, archive, fix, explore, audit)
+                        # (plan, execute, test, verify, review, archive, tweak, fix, explore, audit)
                         # — see "agents/" section
 agents/                 # roles + subagents that consume the skills above (see "agents/" section)
   project-owner.md              # conversational role: pre-technical product scoping
   frontend-architect.md         # conversational role: orchestrator
   frontend-angular-senior.md    # conversational role: Angular execution specialist
   frontend-react-next.md        # conversational role: React/Next execution specialist
-  code-writer.md                # mechanical subagent: used by commands/fea/execute.md, fix.md
+  code-writer.md                # mechanical subagent: used by commands/fea/execute.md
   code-auditor.md               # mechanical subagent: used by execute/fix/verify/audit
   test-generator.md             # mechanical subagent: used by commands/fea/test.md
   visual-reviewer.md            # mechanical subagent: used by commands/fea/review.md (Playwright MCP)
@@ -248,12 +248,38 @@ shouldn't grow one from unrelated work.
 `frontend-architect.md` used to describe the OpenSpec propose/apply/archive
 flow in prose. `commands/fea/*.md` now mechanizes it as Claude Code custom
 slash-commands (namespace `/fea:*`, one per lifecycle step — `plan`,
-`execute`, `test`, `verify`, `review`, `archive`, `fix`, `explore`, `audit`),
-and `frontend-architect.md` cites them instead of re-describing the steps.
-Same "cite, don't reimplement" rule that already governs skills applies
-here. `execute.md`/`fix.md` are what actually delegates to the mechanical
-subagents above (`code-writer` → `code-auditor`, `test-generator` via
-`test.md`, `visual-reviewer` via `review.md`).
+`execute`, `test`, `verify`, `review`, `archive`, `tweak`, `fix`, `explore`,
+`audit`), and `frontend-architect.md` cites them instead of re-describing
+the steps. Same "cite, don't reimplement" rule that already governs skills
+applies here. `execute.md` is what delegates to the mechanical subagents
+above (`code-writer` → `code-auditor`, `test-generator` via `test.md`,
+`visual-reviewer` via `review.md`).
+
+**Ceremony levels.** The commands are split into three levels, spelled out
+in `AGENTS.md` ("Niveles de ceremonia") — guiding rule: if it changes how
+something *looks* → light; if it changes what it *does* or what data it
+handles → full SDD. Level 0 `tweak.md` (visual/copy only) runs inline with
+no subagents, no OpenSpec, no new tests, just lint + build. Level 1
+`fix.md` implements inline (no `code-writer` — the main session already
+holds the `/fea:explore` context, and a cold-start subagent would rebuild
+it), runs one `code-auditor` pass, runs only the *related* tests, and edits
+the canonical spec in `openspec/specs/` in place (keeping its `REQ-NNN`) if
+a described behavior changed — that last step is what keeps specs from
+drifting under a pile of small fixes. Level 2 is the full
+`plan → execute → test → archive` flow. The point is token/time cost: don't
+"strengthen" `tweak`/`fix` by adding subagents or full-suite runs back
+without a concrete reason.
+
+**Verification marker.** `plan.md` writes a `Verificación: test | e2e |
+visual` line under each `### Requirement: REQ-NNN — …` header (no line =
+`test`, backward compatible). `archive.md`'s traceability gate stays hard
+with no bypass, but what counts as evidence depends on the marker: a
+`[REQ-NNN]` test for `test`/`e2e`, or a
+`- [x] [REQ-NNN] verificado visualmente (…)` line in the change's
+`tasks.md` for `visual` (written by `review.md` on approval, or after the
+user confirms a manual review). `test.md`/`test-generator.md` skip `visual`
+REQs and only generate Playwright `.spec.ts` for `e2e` ones, run filtered
+by the change's REQ-IDs (`--grep`), not the full E2E suite.
 
 `review.md` fills a gap `verify.md` states explicitly: verify is "static
 only — never calls a deployed endpoint or runs curls." `review.md` is the
@@ -291,7 +317,7 @@ ecosystem. Reading it top to bottom explains the whole install flow:
 2. Detects which AI agent binary is installed (`claude`, `cursor`, `codex`, `opencode`); prompts if 0 or 2+ found.
 3. Checks for the external "engines" this ecosystem depends on — OpenSpec (spec-driven dev workflow) and Engram (persistent memory via MCP) — and offers (never forces) to install missing ones.
 4. Copies `skills/core/` + the detected framework's skill dir (including its vendored reference and any nested `references/` files, since it copies the whole subtree) into the agent's own global skills directory (e.g. `~/.claude/skills`) — never into the target repo. Copies `agents/` (all 8 files — conversational roles + mechanical subagents, see "agents/" above) into the agent's own subagents directory (e.g. `~/.claude/agents`) via `copy_optional_dir()`, with a guaranteed destination for all 4 supported agents. Copies `commands/` into the agent's own commands directory (e.g. `~/.claude/commands`) via `copy_commands()` — same guaranteed/best-effort split as `commands_dir_for()`, but agent-aware about file layout (see the "commands/fea/\*" caveat above for the Claude-nested vs. OpenCode-flattened difference).
-5. Injects the `AGENTS.md` content into the target project's `AGENTS.md` as an idempotent `<!-- FEA:START -->...<!-- FEA:END -->` block, then runs `openspec init --tools "$AGENT"` (first run) or `openspec update` (if `openspec/` already exists — avoids re-running `init --force` over real specs), `engram setup <agent>`, `ensure_engram_project_config()`, and `ensure_playwright_mcp` — a third engine, wired the same way as Engram (per-agent MCP registration, not a global binary check) — followed by `ensure_context7_mcp` (Context7, Claude scope `user`) and `ensure_framework_mcp` (Angular CLI MCP `angular-cli` / `next-devtools`, Claude scope `local`; React has no official docs MCP, so it relies on Context7): the live-docs sources `framework-version-awareness` consults. All of them go through `ensure_mcp_server()`, which runs `claude mcp list`/`claude mcp add` from inside `$PROJECT_DIR` because Claude's `local` scope is keyed by the working directory. `ensure_engram_project_config()` writes `.engram/config.json` (`{"project_name": "<dir name>"}`) at the target project's root — Engram itself is one global SQLite DB per machine (`engram setup <agent>` is per-agent, not per-project), but it auto-tags each memory with a project name it detects from the enclosing git repo; this file just pins that name so it doesn't drift if the project folder gets moved or renamed later (see Engram's own `AGENT-SETUP.md`). It's idempotent (won't overwrite an existing pinned name) and unconditional — it doesn't require the `engram` binary to be installed yet, since it's only the file Engram will read once it is. For `claude` it runs `claude mcp add -s local playwright -- npx @playwright/mcp@latest` (idempotent — checks `claude mcp list` first); for `cursor`/`codex` it prints the manual config snippet (`.cursor/mcp.json` / `~/.codex/config.toml`) since auto-writing those risks corrupting an existing file; for `opencode` it prints a pointer and explicitly flags the exact config format as unconfirmed for that agent — don't treat that hedge as a TODO to silently "fix" without verifying against a real OpenCode install first. OpenSpec's tool IDs are identical to this script's own `$AGENT` values, so no mapping function is needed there (unlike `engram_agent_arg()`).
+5. Injects the `AGENTS.md` content into the target project's `AGENTS.md` as an idempotent `<!-- FEA:START -->...<!-- FEA:END -->` block, then runs `openspec init --tools "$AGENT"` (first run) or `openspec update` (if `openspec/` already exists — avoids re-running `init --force` over real specs), `engram setup <agent>`, `ensure_engram_project_config()`, and — **only when `--with playwright-visual-review` is passed** (checked via `has_domain()`) — `ensure_playwright_mcp`, a third engine wired the same way as Engram (per-agent MCP registration, not a global binary check; opt-in because without it you only lose live `/fea:review` — persisted E2E `.spec.ts` use the target project's `@playwright/test` runner, not the MCP) — followed by `ensure_context7_mcp` (Context7, Claude scope `user`) and `ensure_framework_mcp` (Angular CLI MCP `angular-cli` / `next-devtools`, Claude scope `local`; React has no official docs MCP, so it relies on Context7): the live-docs sources `framework-version-awareness` consults. All of them go through `ensure_mcp_server()`, which runs `claude mcp list`/`claude mcp add` from inside `$PROJECT_DIR` because Claude's `local` scope is keyed by the working directory. `ensure_engram_project_config()` writes `.engram/config.json` (`{"project_name": "<dir name>"}`) at the target project's root — Engram itself is one global SQLite DB per machine (`engram setup <agent>` is per-agent, not per-project), but it auto-tags each memory with a project name it detects from the enclosing git repo; this file just pins that name so it doesn't drift if the project folder gets moved or renamed later (see Engram's own `AGENT-SETUP.md`). It's idempotent (won't overwrite an existing pinned name) and unconditional — it doesn't require the `engram` binary to be installed yet, since it's only the file Engram will read once it is. For `claude` it runs `claude mcp add -s local playwright -- npx @playwright/mcp@latest` (idempotent — checks `claude mcp list` first); for `cursor`/`codex` it prints the manual config snippet (`.cursor/mcp.json` / `~/.codex/config.toml`) since auto-writing those risks corrupting an existing file; for `opencode` it prints a pointer and explicitly flags the exact config format as unconfirmed for that agent — don't treat that hedge as a TODO to silently "fix" without verifying against a real OpenCode install first. OpenSpec's tool IDs are identical to this script's own `$AGENT` values, so no mapping function is needed there (unlike `engram_agent_arg()`).
 
 Key flags: `--project <path>`, `--agent <name>`, `--yes`, `--dry-run`, `--with <domain1,domain2>`.
 

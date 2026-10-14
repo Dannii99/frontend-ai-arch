@@ -26,7 +26,21 @@ cerrar: `/fea:archive`. Estos comandos viven en `commands/fea/` y se instalan
 globales junto con las skills — son nativos de Claude Code; si tu agente no
 los soporta, usá el CLI directo (`openspec new change <nombre-del-cambio>`,
 `openspec instructions <artifact> --json`, `openspec archive
-<nombre-del-cambio> -y`). Cambios chicos: implementar directo, sin propuesta.
+<nombre-del-cambio> -y`).
+
+**Niveles de ceremonia.** No todo cambio paga el flujo completo. Regla
+guía: si cambia **cómo se ve** → liviano; si cambia **qué hace o qué datos
+maneja** → SDD. El usuario elige el nivel al elegir el comando; el agente
+solo sugiere subir o bajar.
+
+| Nivel | Comando | Cuándo |
+|---|---|---|
+| 0 Tweak | `/fea:tweak` | Estilos, responsive, copy, rename. Sin lógica, estado ni contratos. Sin subagentes, sin tests nuevos, valida con lint + build. |
+| 1 Fix | `/fea:fix` | Bug acotado o mejora chica con lógica, ≤3 archivos. Una auditoría, tests relacionados, y sync del spec canónico si cambió un comportamiento. |
+| 2 Feature | `/fea:plan` → `/fea:execute` → `/fea:test` → `/fea:archive` | Feature, flujo nuevo, cambio de contrato/estado/routing, cálculos o datos sensibles. |
+
+Cada requirement de un spec declara `Verificación: test | e2e | visual`:
+lo `visual` se demuestra con evidencia de revisión, no con un test.
 
 **Contexto de producto antes que arquitectura.** Si existe
 `docs/project-context.md` (objetivo, MVP, reglas de negocio en lenguaje
@@ -34,9 +48,12 @@ humano), leerlo antes de decidir arquitectura o implementar. `docs/` (producto)
 y `openspec/` (specs técnicas) son carpetas distintas, con dueños distintos —
 no se mezclan.
 
-**Memoria (Engram, vía MCP).** Las decisiones, bugs resueltos y convenciones se
-guardan en memoria persistente. Al empezar una sesión, recuperá el contexto del
-proyecto antes de actuar. Guardá lo significativo al terminar trabajo relevante.
+**Memoria (Engram, vía MCP).** Las decisiones, causas raíz no obvias y
+convenciones se guardan en memoria persistente. Consultá memoria al empezar
+solo en nivel 1–2, con los términos de la tarea (no búsquedas genéricas del
+proyecto); en nivel 0 no hace falta. Guardá decisiones y causas raíz, no
+narrativa de lo que hiciste. Un chat por cambio: al cerrar, lo relevante
+queda en memoria y el próximo cambio arranca en una sesión limpia.
 
 **Skills.** Aplicá las skills disponibles según la tarea. No reinventes lo que
 ya está encapsulado en una skill.

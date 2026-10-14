@@ -12,8 +12,9 @@
 #      más agents/ (roles + subagentes, destino garantizado) y los comandos
 #      /fea:* (best-effort, no bloqueante)
 #   5. Orquesta OpenSpec y Engram (que hacen su propio wiring por-agente), y
-#      cablea los MCP de Playwright (revisión en vivo), Context7 y el MCP oficial
-#      del framework (doc viva por versión — ver framework-version-awareness)
+#      cablea los MCP de Context7 y el MCP oficial del framework (doc viva por
+#      versión — ver framework-version-awareness). El MCP de Playwright
+#      (revisión en vivo) es opt-in: solo con --with playwright-visual-review
 #
 # Núcleo portable (idéntico en todo agente): skills, agents (roles + subagentes), bloque de AGENTS.md.
 # Capa de adaptadores (lo único agent-specific): DÓNDE va cada cosa.
@@ -323,6 +324,13 @@ ensure_mcp_server() {
   esac
 }
 
+has_domain() {
+  local d
+  [[ ${#DOMAINS[@]} -gt 0 ]] || return 1
+  for d in "${DOMAINS[@]}"; do [[ "$d" == "$1" ]] && return 0; done
+  return 1
+}
+
 ensure_playwright_mcp() {
   ensure_mcp_server playwright local "/fea:review no va a poder abrir un browser real" @playwright/mcp@latest
 }
@@ -444,6 +452,25 @@ extract_target_rule_value() {
   ' "$target"
 }
 
+# extract_exception_bullets [--fea]
+# Lee AGENTS.md por stdin y devuelve los bullets de "### Excepciones a los
+# estándares": desde el primer "- " de esa sección hasta el fin del bloque FEA
+# (con --fea, para el target) o el fin del archivo (sin --fea, para el
+# AGENTS.md de este repo, que no lleva marcadores). El párrafo intro de la
+# sección no se incluye: ese viene siempre de la versión nueva.
+extract_exception_bullets() {
+  local need_fea=0; [[ "${1:-}" == "--fea" ]] && need_fea=1
+  awk -v need_fea="$need_fea" '
+    /<!-- FEA:START -->/ { infea=1; next }
+    /<!-- FEA:END -->/   { infea=0; insec=0; next }
+    need_fea && !infea   { next }
+    /^### Excepciones a los estándares/ { insec=1; inlist=0; next }
+    insec && /^#/        { insec=0 }
+    insec && !inlist && /^- / { inlist=1 }
+    insec && inlist      { print }
+  '
+}
+
 # ¿ya está completada esa línea (ni vacía ni un placeholder <!-- ... -->,
 # viejo o nuevo formato)?
 rule_value_is_filled() {
@@ -480,6 +507,24 @@ inject_agents_block() {
   [[ $any_prompted  -eq 1 ]] && ok "Reglas del proyecto: respuestas nuevas cargadas"
   [[ $any_preserved -eq 0 && $any_prompted -eq 0 && $interactive -eq 0 ]] && \
     warn "Reglas del proyecto sin completar — quedan marcadores <!-- TODO: completar --> en AGENTS.md"
+
+  # --- Excepciones a los estándares: preservar los bullets del target ---
+  # Si el target ya tenía bullets propios (distintos del placeholder de esta
+  # versión), se conservan tal cual; el intro de la sección se actualiza.
+  # Asume que "Excepciones" es la última sección de AGENTS.md: el splice
+  # corta $block en su primer bullet y le pega los del target.
+  local old_exc new_exc
+  old_exc="$(extract_exception_bullets --fea < "$target")"
+  new_exc="$(printf '%s\n' "$block" | extract_exception_bullets)"
+  if [[ -n "$old_exc" && "$old_exc" != "$new_exc" ]]; then
+    block="$(printf '%s\n' "$block" | awk '
+      /^### Excepciones a los estándares/ { insec=1 }
+      insec && /^- / { exit }
+      { print }
+    ')"
+    block="$block"$'\n\n'"$old_exc"  # $(...) se come la línea en blanco previa
+    ok "Excepciones a los estándares: se preservaron las ya cargadas"
+  fi
 
   # quita un bloque FEA previo si existe
   awk '/<!-- FEA:START -->/{s=1} s!=1{print} /<!-- FEA:END -->/{s=0}' "$target" > "$target.tmp"
@@ -689,8 +734,15 @@ if command -v engram >/dev/null 2>&1; then
 else warn "Engram ausente: corré 'engram setup $(engram_agent_arg "$AGENT")' cuando lo instales"; fi
 ensure_engram_project_config
 
-step "Cableando revisión con Playwright…"
-ensure_playwright_mcp
+# Playwright MCP es opt-in: viaja con la skill playwright-visual-review. Los
+# E2E persistidos (.spec.ts) no lo necesitan — usan @playwright/test del
+# proyecto — así que sin el MCP solo se pierde /fea:review en vivo.
+if has_domain playwright-visual-review; then
+  step "Cableando revisión con Playwright…"
+  ensure_playwright_mcp
+else
+  log "Playwright MCP no registrado (opt-in: --with playwright-visual-review)"
+fi
 
 step "Cableando doc viva por versión (Context7 + MCP oficial del framework)…"
 ensure_context7_mcp
@@ -705,7 +757,9 @@ fi
 
 step "Listo."
 log "Núcleo portable: skills (core${FRAMEWORKS:+ + ${FRAMEWORKS[*]}}) + agentes (roles + subagentes) + bloque AGENTS.md."
-log "Motores: OpenSpec (workflow) + Engram (memoria) + Playwright MCP (revisión en vivo) + Context7/MCP oficial (doc por versión)."
+PLAYWRIGHT_NOTE=""
+has_domain playwright-visual-review && PLAYWRIGHT_NOTE=" + Playwright MCP (revisión en vivo)"
+log "Motores: OpenSpec (workflow) + Engram (memoria) + Context7/MCP oficial (doc por versión)${PLAYWRIGHT_NOTE}."
 [[ ${#DOMAINS[@]} -gt 0 ]] && log "Domains opt-in instalados: ${DOMAINS[*]}." || true
 log "Solo cambiaron las rutas según el agente — eso es la capa de adaptadores."
 [[ $DRY_RUN -eq 1 ]] && log "(fue un dry-run: no se tocó nada)" || true

@@ -84,10 +84,15 @@ disponibles.
       en los specs del change.
     - Si NINGÚN requirement tiene ID (specs previos a esta convención) →
       anotar "sin REQ-IDs (specs pre-convención)", no bloquear.
-    - Si hay REQ-IDs, grepear `\[REQ-NNN\]` en la suite de tests del
-      proyecto (unit/integration + e2e Playwright si existen).
-    - Requirement con REQ-ID sin ningún `[REQ-NNN]` correspondiente →
-      **ADVERTENCIA** ("sin test: REQ-00X").
+    - Leer la línea `Verificación:` debajo de cada header (`test` | `e2e` |
+      `visual`; sin línea = `test`).
+    - REQs `test`/`e2e`: grepear `\[REQ-NNN\]` en la suite de tests del
+      proyecto (unit/integration + e2e Playwright si existen). Sin ningún
+      `[REQ-NNN]` correspondiente → **ADVERTENCIA** ("sin test: REQ-00X").
+    - REQs `visual`: buscar la línea de evidencia
+      `[REQ-NNN] verificado visualmente` en `tasks.md`. Si falta →
+      **ADVERTENCIA** ("sin evidencia visual: REQ-00Y — corré
+      `/fea:review` o confirmá revisión manual").
     - Tag `[REQ-NNN]` en algún test que no corresponde a ningún
       requirement actual del change (huérfano — típico tras reescribir o
       borrar un requirement) → **ADVERTENCIA** ("tag huérfano: REQ-00Y en
@@ -109,7 +114,7 @@ disponibles.
 | Auditor        | ✅ / N críticos        |
 | Contracts      | ok / violaciones / n/a |
 | Manifiesto     | sin drift / N con drift / n/a |
-| Trazabilidad   | K/N reqs con test · J huérfanos / n/a |
+| Trazabilidad   | K/N reqs con evidencia (test · e2e · visual) · J huérfanos / n/a |
 
 ### 🔴 Crítico (arreglar antes de archivar)
 - **[dimensión]** `archivo:línea` — <problema> → <recomendación>

@@ -63,14 +63,22 @@ Antes de nada, chequeá si `openspec/` ya existe en el proyecto (debería
 haberlo creado el `install.sh` de este ecosistema; si no existe, avisá antes
 de improvisar la carpeta a mano).
 
-Tu criterio de cuándo abrir una propuesta antes de codear:
+Tu criterio de cuándo abrir una propuesta sigue los **niveles de
+ceremonia** de `AGENTS.md`:
 
-- **Tarea chica** (fix puntual, ajuste visual aislado, copy, config menor):
-  implementás directo — vos o el especialista — sin propuesta.
-- **Tarea mediana o grande** (feature nueva, decisión de arquitectura,
-  cambio de estado/routing/integración, refactor que toca varios módulos,
-  selección de tecnología, inicialización de proyecto): abrís una propuesta
-  antes de delegar la implementación.
+- **Nivel 0, tweak** (ajuste visual, responsive, copy): `/fea:tweak`, sin
+  propuesta.
+- **Nivel 1, fix** (bug acotado, mejora chica con lógica): `/fea:fix`, sin
+  propuesta; el comando sincroniza el spec canónico si cambió un
+  comportamiento.
+- **Nivel 2, feature** (feature nueva, decisión de arquitectura, cambio de
+  estado/routing/integración, refactor que toca varios módulos, selección
+  de tecnología, inicialización de proyecto): abrís una propuesta antes de
+  delegar la implementación.
+
+Ante la duda entre dos niveles, recomendá el más bajo que cubra el riesgo y
+explicá qué haría subir de nivel. La ceremonia de más también cuesta: tiempo
+y tokens.
 
 Cómo abrís la propuesta, en orden — vía los comandos `/fea:*` de este
 ecosistema (mecanizan este flujo con un loop `code-writer` → `code-auditor`
@@ -105,10 +113,11 @@ cerrar la sesión.
 
 Hay dos caminos, según el tamaño de la tarea:
 
-- **Tarea chica** (sin propuesta, ver arriba): delegás directo al
-  especialista del framework detectado — Angular → `frontend-angular-senior`;
-  React o Next.js → `frontend-react-next`.
-- **Tarea mediana o grande** (con propuesta vía `/fea:plan`): la delegación
+- **Nivel 0–1** (sin propuesta, ver arriba): `/fea:tweak` o `/fea:fix` lo
+  resuelven inline. Si el agente no soporta comandos custom, delegás directo
+  al especialista del framework detectado — Angular →
+  `frontend-angular-senior`; React o Next.js → `frontend-react-next`.
+- **Nivel 2** (con propuesta vía `/fea:plan`): la delegación
   por task ya la mecaniza `/fea:execute` (agente `code-writer`, auditado por
   `code-auditor` — ver `agents/` en `CLAUDE.md`). Vos disparás el comando, no
   repetís el mecanismo a mano.

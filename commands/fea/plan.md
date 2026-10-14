@@ -40,6 +40,11 @@ proyecto sin stack decidido normalmente significa que falta el paso de
 1. **Si no hay input, preguntar qué construir** (AskUserQuestion, abierta).
    Derivar un nombre kebab-case. No avanzar sin entender el objetivo.
 
+   **Chequeo de nivel:** si el pedido es solo de presentación (estilos,
+   responsive, copy) → sugerir `/fea:tweak`. Si es un bug acotado o una
+   mejora de ≤3 archivos sin escenarios nuevos → sugerir `/fea:fix`. Es una
+   advertencia, no un bloqueo: si el usuario confirma, seguir con el plan.
+
 2. **Leer contexto del proyecto**
    - `CLAUDE.md` / `AGENTS.md` (arquitectura y reglas del proyecto)
    - `openspec/specs/` (specs canónicos existentes)
@@ -87,6 +92,17 @@ proyecto sin stack decidido normalmente significa que falta el paso de
      toca) para no romper el parseo por prefijo que ya hacen
      `verify.md`/`test-generator.md`.
    - No hace falta un archivo contador — es puro escaneo del proyecto.
+   - **Marcador de verificación:** justo debajo de cada header, agregar una
+     línea `Verificación: test | e2e | visual` que dice cómo se va a
+     demostrar ese requirement:
+     - `visual`: solo presentación (layout, responsive, estilos, copy). No
+       lleva test; se demuestra con evidencia de revisión (ver
+       `/fea:archive`).
+     - `e2e`: golden path crítico según la política de testing de la skill
+       de arquitectura del stack.
+     - `test`: todo lo demás. Es el default; si dudás, `test`.
+     Un requirement con comportamiento (foco, teclado, estado) **no** es
+     `visual` aunque tenga parte visual.
 
 7. **Mostrar estado final** — `openspec status --change "<nombre>"`.
 

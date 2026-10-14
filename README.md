@@ -56,13 +56,13 @@ fina de adaptadores dentro de `install.sh`.
 │       └── playwright-visual-review/  # revisión en vivo (MCP) + e2e persistido
 ├── commands/fea/                 # slash-commands (/fea:*): mecanizan el flujo de OpenSpec
 │   ├── plan.md · execute.md · test.md · verify.md · review.md · archive.md
-│   └── fix.md · explore.md · audit.md
+│   └── tweak.md · fix.md · explore.md · audit.md
 ├── agents/                       # roles + subagentes: quién hace qué con las skills de arriba
 │   ├── project-owner.md          # rol: scoping de producto, previo a cualquier decisión técnica
 │   ├── frontend-architect.md     # rol: orquestador, decide stack, delega, abre specs
 │   ├── frontend-angular-senior.md    # rol: especialista de ejecución Angular
 │   ├── frontend-react-next.md        # rol: especialista de ejecución React/Next
-│   ├── code-writer.md            # subagente: implementa una task (usa /fea:execute, /fea:fix)
+│   ├── code-writer.md            # subagente: implementa una task (usa /fea:execute)
 │   ├── code-auditor.md           # subagente: audita contra las skills de calidad
 │   ├── test-generator.md         # subagente: genera tests (usa /fea:test)
 │   └── visual-reviewer.md        # subagente: revisión en vivo con Playwright MCP (usa /fea:review)
@@ -96,7 +96,8 @@ punto, invocados por task desde `commands/fea/`):
    de ejecución. Implementan apoyándose en las skills del framework
    correspondiente; no reinventan el criterio que esas skills ya fijan.
 4. **`code-writer`** / **`code-auditor`** / **`test-generator`** — subagentes
-   que usa `/fea:execute`/`/fea:fix`/`/fea:test` por cada task: implementan,
+   que usan `/fea:execute`/`/fea:test` por cada task (`/fea:fix` solo usa el
+   auditor; `/fea:tweak` no usa ninguno): implementan,
    auditan contra las mismas skills de calidad, y generan tests después de
    implementar (incluyendo `.spec.ts` de Playwright persistidos para los
    escenarios que la política de testing marca "e2e"). No se invocan
@@ -165,8 +166,10 @@ Un agente de IA (Claude Code / Cursor / Codex / OpenCode), OpenSpec
 (`npm i -g @fission-ai/openspec@latest`), Engram
 (`brew install gentleman-programming/tap/engram` o `go install …`) y
 Playwright MCP (se sirve vía `npx @playwright/mcp@latest`, sin instalación
-global). El instalador detecta los tres y ofrece instalar/cablear el que
-falte — no lo fuerza. Además ofrece cablear los MCP de **doc viva por
+global; **opt-in**: solo se cablea con `--with playwright-visual-review`,
+porque sin él solo se pierde `/fea:review` en vivo — los E2E persistidos
+usan el runner del proyecto, no el MCP). El instalador detecta los motores y
+ofrece instalar/cablear el que falte — no lo fuerza. Además ofrece cablear los MCP de **doc viva por
 versión**: Context7 (`npx -y @upstash/context7-mcp`, para los tres
 frameworks) y el MCP oficial del framework cuando existe (Angular CLI
 `npx @angular/cli mcp`; `next-devtools-mcp` para Next) — ver "Skills que no
@@ -181,13 +184,18 @@ detecta el framework por `package.json` e instala solo las skills relevantes
 (viajan con vos, no ensucian el repo — se re-copian en cada corrida, pero es
 barato e idempotente), inyecta tus estándares en el `AGENTS.md` **de ese
 proyecto** como bloque idempotente, y orquesta `openspec init`, `engram
-setup` + el pineo de `project_name` de Engram para ese repo, y el registro
-del MCP de Playwright — cada motor hace su propio wiring por-agente y
+setup` + el pineo de `project_name` de Engram para ese repo, y (si lo
+pediste con `--with playwright-visual-review`) el registro del MCP de
+Playwright — cada motor hace su propio wiring por-agente y
 por-proyecto donde corresponde. Correrlo de nuevo sobre el mismo proyecto no
 duplica ni rompe nada, solo actualiza — incluyendo "Reglas del proyecto": si
 ya la habías completado, esa respuesta se preserva en el reinstall en vez de
 volver a un placeholder; si falta y hay terminal interactiva te la pregunta,
-y si no queda un `<!-- TODO: completar -->` explícito. Además escribe/actualiza
+y si no queda un `<!-- TODO: completar -->` explícito. Lo mismo con las
+"Excepciones a los estándares" que hayas cargado, y con todo lo que tengas
+fuera del bloque `<!-- FEA -->`. `openspec/` (specs, changes en curso y
+archivados) no se toca: si ya existe, se corre `openspec update`, que solo
+regenera la config por-agente. Además escribe/actualiza
 `.fea/manifest.json` en la raíz del proyecto (commiteable): el commit del
 ecosistema, la fecha, el agente equipado, cada framework detectado con su
 versión y el rango que cubren sus skills, y cada skill instalada con un hash
@@ -228,18 +236,37 @@ proyecto quedó desalineado con lo instalado en la máquina actual.
    `project-owner` ni decidir stack de nuevo (ver el escenario "Ya existe un
    proyecto" en `agents/frontend-architect.md`).
 
+### Niveles de ceremonia — no todo cambio paga el flujo completo
+
+Regla guía: si cambia **cómo se ve** → liviano; si cambia **qué hace o qué
+datos maneja** → SDD. Vos elegís el nivel al elegir el comando; el agente
+solo sugiere subir o bajar.
+
+| Nivel | Comando | Cuándo | Qué paga |
+|---|---|---|---|
+| 0 Tweak | `/fea:tweak` | Estilos, responsive, copy, rename | Inline, sin subagentes, sin tests nuevos, sin leer memoria. Lint + build. |
+| 1 Fix | `/fea:fix` | Bug acotado, mejora chica con lógica (≤3 archivos) | Inline + una pasada de `code-auditor`, solo tests relacionados, sync del spec canónico si cambió un comportamiento. |
+| 2 Feature | `/fea:plan` → `execute` → `test` → `archive` | Feature, flujo nuevo, contrato/estado/routing, cálculos | Flujo completo con REQ-IDs y gates duros. |
+
+Así el spec no se desactualiza con los cambios chicos (`/fea:fix` lo
+sincroniza) y lo visual no obliga a escribir tests: cada requirement declara
+`Verificación: test | e2e | visual`, y los `visual` se cierran con evidencia
+de revisión (`/fea:review` o manual) en vez de un test. Los E2E corren
+filtrados por los REQ-IDs del change, no la suite entera.
+
 ### Uso día a día — comandos `/fea:*`
 
 | Comando | Cuándo usarlo |
 |---|---|
+| `/fea:tweak <qué ajustar>` | Nivel 0 — ajuste visual/cosmético sin lógica. Lo más barato del ecosistema. |
 | `/fea:explore` | Pensar en voz alta antes de comprometerte a un enfoque — no implementa nada. |
 | `/fea:plan <nombre>` | Feature nueva o cambio no trivial — crea el change de OpenSpec (proposal, specs, design, tasks) y numera cada requirement con un `REQ-NNN` estable. |
 | `/fea:execute <nombre>` | Implementa las tasks del plan — loop `code-writer` ⇄ `code-auditor`, con lint/build/test al final. |
 | `/fea:test <nombre>` | Opcional, después de `execute` — genera y corre tests contra el código real, cada uno tagueado `[REQ-NNN]` con el requirement que cubre. |
 | `/fea:verify <nombre>` | Antes de archivar — chequeo estático del código contra los artifacts (completeness/correctness/coherence), drift del manifiesto de skills, y requirements/tests huérfanos de trazabilidad. |
-| `/fea:review <nombre>` | Antes de archivar, si el change tiene UI — revisión en vivo con Playwright MCP (accesibilidad real, visual, consola). |
-| `/fea:archive <nombre>` | Cierra el change — gates duros de lint y de trazabilidad (todo `REQ-NNN` necesita al menos un test), sincroniza specs a `openspec/specs/`. |
-| `/fea:fix <descripción>` | Bug o tarea chica (≤3 archivos, sin cambios de arquitectura) — sin artifacts de OpenSpec. |
+| `/fea:review <nombre>` | Antes de archivar, si el change tiene UI — revisión en vivo con Playwright MCP (accesibilidad real, visual, consola). Registra la evidencia de los REQs `visual`. Requiere `--with playwright-visual-review`. |
+| `/fea:archive <nombre>` | Cierra el change — gates duros de lint y de trazabilidad (cada `REQ-NNN` necesita su evidencia: un test, o una línea de verificación visual si es `visual`), sincroniza specs a `openspec/specs/`. |
+| `/fea:fix <descripción>` | Nivel 1 — bug o tarea chica (≤3 archivos, sin cambios de arquitectura). Sin change de OpenSpec, pero sincroniza el spec canónico si cambió un comportamiento. |
 | `/fea:audit <archivo\|carpeta>` | Auditoría ad-hoc de calidad sobre archivos puntuales, fuera del ciclo de un change. |
 
 Si tu agente no soporta comandos custom (`/fea:*` es nativo de Claude Code),

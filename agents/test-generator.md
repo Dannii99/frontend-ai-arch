@@ -11,7 +11,8 @@ Te invoca `/fea:test`, después de que `/fea:execute` terminó.
 ## Qué recibís
 
 - El nombre del change y sus specs (`openspec/changes/<nombre>/specs/`), con
-  los escenarios `#### Scenario:` (WHEN/THEN).
+  los escenarios `#### Scenario:` (WHEN/THEN) y la línea `Verificación:` de
+  cada requirement (`test` | `e2e` | `visual`; sin línea = `test`).
 - El código implementado, para leer las firmas reales.
 - La sección de testing de la skill de arquitectura del framework detectado
   (`angular-architecture` / `react-architecture` / `next-architecture`) — ahí
@@ -22,7 +23,8 @@ Te invoca `/fea:test`, después de que `/fea:execute` terminó.
 ## Cómo trabajás
 
 1. Leer los escenarios WHEN/THEN de los specs del change — son los casos a
-   cubrir.
+   cubrir. Saltear los requirements `Verificación: visual`: se demuestran
+   con evidencia de revisión, no con un test.
 2. Leer el código real implementado — de ahí salen las firmas exactas
    (nombres, tipos, props/inputs) que los tests van a invocar. Nunca
    inventes una firma que no existe en el código.
@@ -35,8 +37,8 @@ Te invoca `/fea:test`, después de que `/fea:execute` terminó.
    título/descripción de cada test con `[REQ-NNN]` (el ID del
    `### Requirement:` al que pertenece el escenario) — literal, agnóstico
    de test runner (`it('[REQ-003] ...')`, `test('[REQ-003] ...')`, etc.).
-5. Si un escenario cae en la categoría "e2e" que fija la skill de
-   arquitectura (golden path crítico de negocio: checkout, login, un submit
+5. Si el requirement está marcado `Verificación: e2e` (golden path crítico
+   de negocio según la skill de arquitectura: checkout, login, un submit
    irreversible), ese test NO es unit/integration — generalo como `.spec.ts`
    de Playwright siguiendo `playwright-visual-review` (si el proyecto la
    instaló vía `--with playwright-visual-review`; si no está instalada,

@@ -40,14 +40,24 @@ opciones disponibles.
 3. **Gate de trazabilidad (REQ-ID → test).**
 
    - Extraer todos los `REQ-NNN` de los specs del change
-     (`openspec/changes/<nombre>/specs/`).
+     (`openspec/changes/<nombre>/specs/`), junto con su línea
+     `Verificación:` (sin línea = `test`, compatible con specs anteriores
+     a esta convención).
    - Si ningún requirement tiene REQ-ID (specs pre-convención) → saltear
      sin bloquear, anotar "sin REQ-IDs (specs pre-convención)".
-   - Si hay REQ-IDs, grepear `\[REQ-NNN\]` en la suite de tests del
-     proyecto. Cualquier REQ-ID del change SIN tag correspondiente →
-     **PARAR**: "Trazabilidad incompleta — faltan tests para: REQ-00X,
-     REQ-00Y. Corré `/fea:test` o cubrilos antes de archivar." Sin bypass
-     — gate duro, igual que lint.
+   - **REQs `test` y `e2e`:** grepear `\[REQ-NNN\]` en la suite de tests
+     del proyecto (unit/integration + `.spec.ts` de Playwright).
+   - **REQs `visual`:** no exigen test. Exigen evidencia en el `tasks.md`
+     del change, con esta forma:
+     `- [x] [REQ-NNN] verificado visualmente (/fea:review | manual: <viewports>, <fecha>)`.
+     `/fea:review` la escribe sola al aprobar; si la revisión fue manual,
+     el usuario confirma y se agrega la línea con los viewports que miró.
+   - Cualquier REQ sin su evidencia (test para `test`/`e2e`, línea en
+     `tasks.md` para `visual`) → **PARAR**: "Trazabilidad incompleta —
+     sin test: REQ-00X; sin evidencia visual: REQ-00Y. Corré `/fea:test`,
+     `/fea:review`, o confirmá la revisión manual antes de archivar." Sin
+     bypass: gate duro, igual que lint. Lo único que cambia entre tipos es
+     qué cuenta como evidencia.
 
 5. **Chequear que los artifacts estén completos** —
    `openspec status --change "<nombre>" --json`. Si algún artifact no está
@@ -76,6 +86,7 @@ opciones disponibles.
    **Specs:** <totales sincronizados | sin delta specs>
    **Quality gate:** lint en verde
    **Tests:** <en verde | sin tests (no se generaron)>
+   **Trazabilidad:** <N por test · M por e2e · K por evidencia visual | sin REQ-IDs>
 
    Actualizá CLAUDE.md/AGENTS.md ("Reglas del proyecto") si esto cambió cómo
    funciona el proyecto.
@@ -90,6 +101,8 @@ opciones disponibles.
 - Usar los scripts del `package.json` del proyecto — nunca hardcodear un
   toolchain.
 - No bloquear el archive por advertencias — informar y confirmar.
-- **Nuevo gate duro (además de lint): trazabilidad REQ-ID → test.** Sin
-  bypass — es una escalada deliberada respecto a los gates existentes
-  (antes solo lint bloqueaba).
+- **Nuevo gate duro (además de lint): trazabilidad REQ-ID → evidencia.**
+  Sin bypass — es una escalada deliberada respecto a los gates existentes
+  (antes solo lint bloqueaba). La evidencia es un test `[REQ-NNN]` para
+  REQs `test`/`e2e`, y una línea de verificación en `tasks.md` para REQs
+  `visual`.
