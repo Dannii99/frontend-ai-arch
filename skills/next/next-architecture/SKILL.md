@@ -16,6 +16,12 @@ compatibility: next
 metadata:
   category: next-architecture
   framework: next
+  versions:
+    package: "next"
+    min_supported: "15"
+    verified_against: "16"
+    verified_at: "2026-07-28"
+    reference: next-references
 ---
 
 # Next.js Architecture
@@ -28,6 +34,17 @@ bien. Es criterio, no manual.
 Regla de fondo (como el resto de tus skills): respetá lo que el proyecto ya usa.
 Si está en Pages Router, no lo migres a App Router de prepo; si está en una
 versión vieja, no fuerces APIs nuevas. Proponé, no impongas.
+
+## Versión del framework
+
+Esta skill está verificada contra Next 16 y aplica desde Next 15 (ver
+`metadata.versions`). Antes de escribir código, resolvé la versión real de
+`next` (y de `react`) siguiendo `framework-version-awareness` (core) — no
+repitas acá ese protocolo. Los defaults marcados `(desde vX)` solo aplican si
+el proyecto ya está en `vX` o más. En Next 14 o anterior el criterio de
+carpetas/Server-Client/testing sigue valiendo, pero varias APIs de abajo
+cambian (params sincrónicos, `middleware.ts`, modelo de caching distinto):
+verificá contra la doc de esa versión antes de escribir código.
 
 ## Cuándo usar
 
@@ -104,7 +121,8 @@ Es el área donde más se rompe el default esperado — el criterio:
 - **`fetch` con `revalidate`** (`fetch(url, { next: { revalidate: N } })`)
   para la mayoría de las lecturas: revalidación por tiempo, simple y
   suficiente para el caso común.
-- **`'use cache'`** (Cache Components) cuando el proyecto ya adoptó esa
+- **`'use cache'`** (Cache Components) `(estable desde v16; experimental en
+  v15)` cuando el proyecto ya adoptó esa
   feature — cachea la salida de una función o componente entero, con más
   control que `revalidate` puntual. Ver `next-references/directives.md`. No
   la introduzcas en un proyecto que no la adoptó explícitamente; es un
@@ -148,7 +166,7 @@ Next:
   exactamente el mecanismo de filtrado al cliente que `frontend-security`
   pide evitar.
 
-## APIs async (v15+)
+## APIs async (desde v15)
 
 - `params`, `searchParams`, `cookies()` y `headers()` son **asíncronas**:
   tipalas `Promise<...>` y `await`. En componentes no-async, `use()`.
@@ -183,7 +201,7 @@ Next:
 ## Routing y metadata (breve)
 
 - Convenciones del App Router: `page`, `layout`, `loading`, `error`, `route`.
-  Carpetas privadas con prefijo `_`. En v16, `middleware.ts` pasó a `proxy.ts`
+  Carpetas privadas con prefijo `_`. `(desde v16)` `middleware.ts` pasó a `proxy.ts`
   (ver `next-references/file-conventions.md` para la tabla de migración por
   versión).
 - **Middleware/`proxy.ts` solo para lógica liviana**: auth (redirects según
@@ -217,7 +235,9 @@ esa política base, solo el matiz que cambia por Server Components:
 ## Qué NO va acá
 
 Los principios universales —tipado, nombres, estado, componentes chicos, a11y—
-viven en `frontend-clean-code` y `accessibility-a11y` (core); SOLID y los
+viven en `frontend-clean-code` y `accessibility-a11y` (core); cómo resolver la
+versión de Next y cuándo consultar doc viva vive en
+`framework-version-awareness` (core); SOLID y los
 patrones de arquitectura (Facade, Repository, Adapter, límites entre módulos)
 viven en `frontend-design-principles` (core). El límite `core/`/`shared/`/
 `features/` en sí (por qué existe, cuándo promover algo) es el de
@@ -242,6 +262,8 @@ está en `next-references`, esta skill solo la cita y decide un default.
 
 ## Al terminar, reportá
 
+0. Versión de Next detectada y si cayó dentro del rango de esta skill (ver
+   `framework-version-awareness`); qué consultaste en doc viva, si hizo falta.
 1. Qué convenciones aplicaste o corregiste (patrón viejo/inválido → correcto).
 2. Dónde ubicaste los archivos nuevos (`app/` como glue vs. `features/`/
    `shared/`/`core/`) y por qué.

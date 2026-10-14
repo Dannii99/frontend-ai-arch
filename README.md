@@ -37,6 +37,7 @@ fina de adaptadores dentro de `install.sh`.
 │   │   ├── frontend-clean-code/          # calidad micro: nombres, tipos, funciones
 │   │   ├── frontend-design-principles/   # SOLID + patrones (Facade, Repository, Adapter)
 │   │   ├── frontend-security/            # XSS, inyección, CSRF, secrets, validación de input
+│   │   ├── framework-version-awareness/  # versión real del proyecto vs. cobertura de las skills → doc viva
 │   │   ├── ui-visual-craft/
 │   │   ├── motion-design-system/
 │   │   └── documentation-writer/
@@ -165,7 +166,11 @@ Un agente de IA (Claude Code / Cursor / Codex / OpenCode), OpenSpec
 (`brew install gentleman-programming/tap/engram` o `go install …`) y
 Playwright MCP (se sirve vía `npx @playwright/mcp@latest`, sin instalación
 global). El instalador detecta los tres y ofrece instalar/cablear el que
-falte — no lo fuerza. Esta parte es **por máquina**, no por proyecto: una vez
+falte — no lo fuerza. Además ofrece cablear los MCP de **doc viva por
+versión**: Context7 (`npx -y @upstash/context7-mcp`, para los tres
+frameworks) y el MCP oficial del framework cuando existe (Angular CLI
+`npx @angular/cli mcp`; `next-devtools-mcp` para Next) — ver "Skills que no
+se quedan viejas" abajo. Esta parte es **por máquina**, no por proyecto: una vez
 que el agente y los motores están instalados, no hace falta reinstalarlos
 para el próximo proyecto.
 
@@ -184,7 +189,8 @@ ya la habías completado, esa respuesta se preserva en el reinstall en vez de
 volver a un placeholder; si falta y hay terminal interactiva te la pregunta,
 y si no queda un `<!-- TODO: completar -->` explícito. Además escribe/actualiza
 `.fea/manifest.json` en la raíz del proyecto (commiteable): el commit del
-ecosistema, la fecha, el agente equipado y cada skill instalada con un hash
+ecosistema, la fecha, el agente equipado, cada framework detectado con su
+versión y el rango que cubren sus skills, y cada skill instalada con un hash
 de su `SKILL.md` — `/fea:verify` lo usa para avisar (sin bloquear) si el
 proyecto quedó desalineado con lo instalado en la máquina actual.
 
@@ -264,6 +270,42 @@ el mismo flujo se sigue a mano con el CLI de OpenSpec — ver
 > cliente, es lo esperado — no lo confundas con una fuga de nuestras skills
 > globales (`~/.claude/skills/`), que siguen viviendo solo en tu máquina.
 
+## Skills que no se quedan viejas (versión del framework)
+
+Las skills de framework son una foto: se verificaron contra una versión
+concreta (Angular 21, Next 16, React 19 hoy), y el framework sigue avanzando.
+En vez de reescribirlas en cada release, el ecosistema separa dos preguntas:
+
+- **"¿Qué existe y cómo se usa?"** — depende de la versión instalada en el
+  proyecto. Fuente: la doc oficial de esa versión.
+- **"¿Qué decidimos nosotros?"** — carpetas, cuándo un store, qué se testea.
+  Criterio de casa, cambia poco, vive en `*-architecture`.
+
+Cómo funciona:
+
+1. Cada `*-architecture` declara en su frontmatter qué rango cubre
+   (`metadata.versions`: `min_supported`, `verified_against`, `verified_at`),
+   y marca `(desde vX)` las decisiones que dependen de una API reciente
+   (Signal Forms, zoneless, `'use cache'`, `proxy.ts`, Actions de React…).
+2. `install.sh` detecta la versión del framework (de `node_modules`, o el
+   rango de `package.json`), avisa si queda fuera de ese rango y la guarda en
+   `.fea/manifest.json`.
+3. En runtime, el agente aplica `framework-version-awareness` (core): resuelve
+   la versión real del lockfile, y si el proyecto es más viejo o más nuevo que
+   lo que cubren las skills — o la API a usar tiene marca `(desde vX)` —
+   consulta la doc de **esa** versión antes de escribir código: MCP oficial
+   del framework → Context7 → doc web versionada (`v<N>.angular.dev`,
+   `nextjs.org/docs`, `react.dev`).
+4. Cada desfase entre la doc local y la oficial se reporta (y se guarda en
+   Engram): es la señal para actualizar la skill acá, bumpear
+   `verified_against` y anotar el nuevo `(desde vX)`. Así las skills
+   evolucionan con evidencia real de los proyectos, en vez de quedar
+   deprecadas en silencio.
+
+El criterio de casa no se reemplaza por la doc viva: si la doc nueva vuelve
+obsoleta una decisión, el agente aplica el equivalente más cercano y lo
+reporta como desfase — la decisión la actualizás vos.
+
 ## Qué capas cubre
 
 El criterio senior que carga el agente, resumido — cada capa la respalda una
@@ -279,6 +321,7 @@ skill real, no es solo una promesa:
 | **Testing** | Qué amerita test completo vs. smoke test vs. e2e (Playwright) — política objetiva, no "todo" ni "nada". | Sección de testing de cada `*-architecture` |
 | **Diseño visual y motion** | Jerarquía, espaciado, estados, animaciones con propósito. | `ui-visual-craft`, `motion-design-system` (core) |
 | **Performance** | Bundle size, waterfalls, rerenders — reglas priorizadas por impacto. | `*-references` (vendored) citadas por cada `*-architecture` |
+| **Versión del framework** | Solo APIs que existen (y no están deprecadas) en la versión instalada; doc viva cuando el proyecto queda fuera del rango que cubren las skills. | `framework-version-awareness` (core) + `metadata.versions` de cada `*-architecture` |
 
 Todas menos las de framework se instalan siempre (`core/`); las de framework
 se instalan solo si el proyecto las usa; las de `domains/` son opt-in
@@ -291,6 +334,11 @@ explícito vía `--with`.
       micro + SOLID/patrones
 - [x] `core/frontend-security` — XSS, inyección, CSRF, secrets, validación de
       input (seguridad de aplicación, no de deploy)
+- [x] `core/framework-version-awareness` — versión real del proyecto vs.
+      cobertura de las skills, doc viva por versión (MCP oficial / Context7)
+- [ ] Procedimiento de refresco de referencias (re-vendorear
+      `angular-references`, bumpear `verified_against`) a partir de los
+      desfases reportados
 - [x] `core/ui-visual-craft`, `core/motion-design-system`,
       `core/documentation-writer`
 - [x] `angular/` — `angular-architecture` (incluye deploy safety) +

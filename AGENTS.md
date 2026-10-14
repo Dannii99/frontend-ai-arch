@@ -55,6 +55,10 @@ ya está encapsulado en una skill.
   valores hardcodeados) se filtra al build de producción. Ver la sección de
   deploy safety dentro de la skill de arquitectura del framework
   correspondiente (p. ej. `angular-architecture`).
+- **Versión del framework:** el código respeta la versión instalada en este
+  proyecto (lockfile, no el rango de `package.json`) — ni APIs que todavía no
+  existen en ella, ni APIs deprecadas en ella. Ver
+  `framework-version-awareness` (core).
 
 ## Precedencia
 
@@ -74,6 +78,14 @@ menor autoridad):
 
 Ante ambigüedad entre dos fuentes del mismo nivel, preferir la más
 específica a este proyecto sobre la más genérica.
+
+Ese orden gobierna **decisiones** (qué se hace y cómo se organiza). Para
+**qué existe y cómo se usa** una API del framework, manda otro eje: la doc
+oficial de la versión instalada en este proyecto está por encima de las
+referencias locales de las skills, y ambas por encima del conocimiento
+propio del modelo. Cómo resolver la versión y cuándo consultar doc viva
+(MCP oficial del framework, Context7, doc web versionada): ver
+`framework-version-awareness`.
 
 Este bloque viene de **frontend-ai-arch (Wordflow)**, un ecosistema
 portable de skills/agentes/comandos instalado sobre este proyecto (no es

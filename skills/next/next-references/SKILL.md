@@ -2,6 +2,12 @@
 name: next-references
 description: Next.js best practices - file conventions, RSC boundaries, data patterns, async APIs, metadata, error handling, route handlers, image/font optimization, bundling
 user-invocable: false
+metadata:
+  versions:
+    package: "next"
+    min_supported: "15"
+    verified_against: "16"
+    verified_at: "2026-07-28"
 ---
 
 # Next.js Best Practices

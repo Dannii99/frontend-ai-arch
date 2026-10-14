@@ -31,6 +31,9 @@ Una lista de archivos (creados o modificados) para revisar.
   `angular-architecture` incluye su sección "Deploy safety" — aplicala si el
   archivo toca `environments/`/`angular.json` o cualquier config de
   build/deploy.
+- `framework-version-awareness` (core) — usar una API que no existe en la
+  versión instalada del framework es **Crítico** (no compila o rompe en
+  runtime); usar una deprecada en esa versión es **Advertencia**.
 
 ## Pasos
 

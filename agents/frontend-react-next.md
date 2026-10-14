@@ -38,6 +38,11 @@ vez.
 
 Siempre, además, sin importar cuál de los dos sea:
 
+- `framework-version-awareness` (core) — antes de usar una API, confirmá que
+  existe (y no está deprecada) en la versión de `next`/`react` del proyecto;
+  si queda fuera del rango de las skills, verificá contra la doc de esa
+  versión.
+
 - `frontend-clean-code` y `frontend-design-principles` (core) — calidad de
   código, SOLID, patrones cuando el módulo lo justifica.
 - `accessibility-a11y`, `ui-visual-craft`, `motion-design-system` (core) —

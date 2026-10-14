@@ -16,6 +16,12 @@ compatibility: angular
 metadata:
   category: angular-architecture
   framework: angular
+  versions:
+    package: "@angular/core"
+    min_supported: "17"
+    verified_against: "21"
+    verified_at: "2026-07-23"
+    reference: angular-references (BUILD_INFO e779309)
 ---
 
 # Angular Architecture
@@ -34,6 +40,16 @@ responsabilidad) viven en `frontend-clean-code` (core); SOLID y los patrones
 de arquitectura (Facade, Repository, Adapter, límites entre módulos) viven en
 `frontend-design-principles` (core). Si algo aplica a cualquier front, no lo
 repitas acá: es core.
+
+## Versión del framework
+
+Esta skill está verificada contra Angular 21 y aplica desde Angular 17 (ver
+`metadata.versions`). Antes de escribir código, resolvé la versión real del
+proyecto y compará contra ese rango siguiendo `framework-version-awareness`
+(core) — no repitas acá ese protocolo. Los defaults marcados `(desde vX)`
+solo aplican si el proyecto ya está en `vX` o más; si no, usá el fallback que
+indica cada uno. Fuera del rango, el criterio de arquitectura sigue valiendo,
+pero la API concreta se verifica contra la doc de la versión del proyecto.
 
 ## Cuándo usar
 
@@ -79,17 +95,19 @@ src/app/
 
 ## Rendering y detección de cambios
 
-- **Standalone por default**: desde Angular 19, `standalone: true` es el
-  default de los componentes (ver `angular-references/angular-developer`,
+- **Standalone por default** `(desde v19 como default implícito)`: desde
+  Angular 19, `standalone: true` es el default de los componentes (ver `angular-references/angular-developer`,
   `references/components.md`) — no generes `NgModule` para código nuevo
   salvo que el proyecto ya sea NgModule-based y migrarlo no esté en alcance.
+  En v17–18 hay que declarar `standalone: true` explícito.
 - **`ChangeDetectionStrategy.OnPush` en todo componente nuevo.** Combinado
   con signals (que ya notifican sus propios cambios), `OnPush` evita el
   costo de que Angular revise el árbol entero en cada evento. No hay razón
   para arrancar en `Default` en código nuevo.
-- **Zoneless**: si el proyecto ya lo habilitó (`provideZonelessChangeDetection()`),
-  respetalo — no reintroduzcas Zone.js ni asumas que hace falta para que
-  `OnPush` funcione. Si el proyecto todavía usa Zone.js, no migres a zoneless
+- **Zoneless** `(estable desde v20; experimental en v18–19)`: si el
+  proyecto ya lo habilitó (`provideZonelessChangeDetection()`), respetalo —
+  no reintroduzcas Zone.js ni asumas que hace falta para que `OnPush`
+  funcione. Si el proyecto todavía usa Zone.js, no migres a zoneless
   de prepo; es una migración explícita, no un default silencioso.
 
 ## Manejo de estado
@@ -112,7 +130,7 @@ servicio afectado, no un rediseño de toda la app.
 
 ## Interop RxJS ↔ Signals
 
-- **`toSignal()` / `toObservable()`** para cruzar entre los dos mundos; en el
+- **`toSignal()` / `toObservable()`** (`@angular/core/rxjs-interop`) para cruzar entre los dos mundos; en el
   template, señales o `async` pipe — no ambos a la vez para el mismo dato.
 - **No dejes subscripciones colgadas**: `takeUntilDestroyed()` o `async` pipe,
   nunca un `subscribe()` sin gestión de ciclo de vida.
@@ -130,7 +148,7 @@ Angular tiene tres sistemas de forms; no es indiferente cuál usar:
   cualquier form con validación real, campos condicionales, o más de 2-3
   campos. Es el sistema maduro, con la mecánica cubierta en
   `angular-references/angular-developer` (`references/reactive-forms.md`).
-- **Signal Forms** (nuevo, disponible desde Angular v21) — usalo solo si el
+- **Signal Forms** `(desde v21)` — usalo solo si el
   proyecto ya es Angular 21+ y ya adoptó signals-first en el resto de la
   arquitectura (ver "Manejo de estado" arriba). No lo introduzcas en un
   proyecto que todavía está en Reactive Forms sin que te lo pidan — es una
@@ -145,6 +163,9 @@ Angular tiene tres sistemas de forms; no es indiferente cuál usar:
 
 La mecánica de testing (Vitest, `TestBed`, patrón Act/Wait/Assert) está en
 `angular-references/angular-developer` (`references/testing-fundamentals.md`).
+Vitest es el runner default de proyectos nuevos `(desde v21)`; si el proyecto
+ya usa Karma/Jasmine o Jest, se respeta — migrar el runner es un cambio
+explícito, no un efecto colateral.
 Acá va la política de **qué amerita test**:
 
 - **Test completo siempre:**
@@ -296,6 +317,8 @@ patrón ya establecido gana salvo que el usuario pida migrar.
 
 ## Al terminar, reportá
 
+0. Versión de Angular detectada y si cayó dentro del rango de esta skill (ver
+   `framework-version-awareness`); qué consultaste en doc viva, si hizo falta.
 1. Dónde ubicaste los archivos nuevos y por qué (core/shared/feature).
 2. Si sumaste o evitaste sumar un store, y cuál de los criterios de escalación
    aplicó (o por qué ninguno aplicó).

@@ -50,6 +50,9 @@ Podés encontrarte con tres situaciones:
 2. **Ya existe un proyecto.** Inspeccionalo primero: `package.json`,
    estructura de carpetas, routing, estilos, librerías de UI, testing. El
    stack detectado es el default — no proponés cambiarlo sin pedido explícito.
+   Resolvé también la **versión** del framework y si cae dentro del rango que
+   cubren las skills (`framework-version-awareness`), y pasásela al
+   especialista al delegar.
 3. **El usuario elige el stack explícitamente.** Lo respetás sin comparar
    frameworks salvo que te lo pidan. Mencionás un riesgo solo si es relevante.
 
@@ -124,7 +127,7 @@ fija el criterio de cuándo y con qué contexto delegar, no el mecanismo.
 
 Siempre (core): `frontend-design-principles`, `frontend-clean-code`,
 `accessibility-a11y`, `ui-visual-craft`, `motion-design-system`,
-`frontend-security`.
+`frontend-security`, `framework-version-awareness`.
 
 Según el framework detectado o elegido, además:
 
@@ -163,7 +166,7 @@ dejá que la skill correspondiente resuelva el detalle.
 
 ## Al terminar, reportá
 
-1. Qué stack detectaste, elegiste o recomendaste, y por qué.
+1. Qué stack (y versión) detectaste, elegiste o recomendaste, y por qué.
 2. A qué especialista delegaste (si aplica) y con qué alcance.
 3. Si abriste una propuesta en `openspec/`, o por qué la tarea no lo
    ameritaba.

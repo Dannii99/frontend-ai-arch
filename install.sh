@@ -3,7 +3,8 @@
 # install.sh — equipa CUALQUIER proyecto con este ecosistema de IA.
 #
 # Qué hace, en orden:
-#   1. Detecta el package manager y el STACK del proyecto (Angular/React/Next) leyendo package.json
+#   1. Detecta el package manager, el STACK del proyecto (Angular/React/Next) leyendo package.json,
+#      y la VERSIÓN instalada de cada framework (avisa si queda fuera del rango que cubren las skills)
 #   2. Detecta el AGENTE de IA (si hay 0 o varios, pregunta; si hay 1, sigue)
 #   3. Chequea los MOTORES (OpenSpec, Engram). Si falta alguno, te dice cuál y
 #      OFRECE instalarlo con el comando correcto para tu SO (no instala a la fuerza)
@@ -11,7 +12,8 @@
 #      más agents/ (roles + subagentes, destino garantizado) y los comandos
 #      /fea:* (best-effort, no bloqueante)
 #   5. Orquesta OpenSpec y Engram (que hacen su propio wiring por-agente), y
-#      cablea el MCP de Playwright (revisión en vivo — ver ensure_playwright_mcp)
+#      cablea los MCP de Playwright (revisión en vivo), Context7 y el MCP oficial
+#      del framework (doc viva por versión — ver framework-version-awareness)
 #
 # Núcleo portable (idéntico en todo agente): skills, agents (roles + subagentes), bloque de AGENTS.md.
 # Capa de adaptadores (lo único agent-specific): DÓNDE va cada cosa.
@@ -75,6 +77,53 @@ detect_pm() {
 }
 
 has_dep() { grep -q "\"$1\"" "$PROJECT_DIR/package.json" 2>/dev/null; }
+
+# Paquete npm que define la versión de cada framework (el mismo que declara
+# metadata.versions.package en su skill de arquitectura).
+framework_package() { case "$1" in angular) echo "@angular/core" ;; next) echo "next" ;; react) echo "react" ;; esac; }
+
+# installed_version <paquete> -> "<versión>|<origen>" (origen: instalada|rango).
+# Prioriza lo instalado de verdad (node_modules); si no hay, cae al rango de
+# package.json sin el prefijo (^19.2.0 -> 19.2.0) y lo marca como "rango".
+# No parsea lockfiles en bash (frágil entre npm/pnpm/yarn/bun): eso lo hace
+# el agente en runtime, ver framework-version-awareness.
+installed_version() {
+  local pkg="$1" f="$PROJECT_DIR/node_modules/$1/package.json" v=""
+  if [[ -f "$f" ]]; then
+    v="$(grep -m1 '"version"' "$f" | sed -E 's/.*"version" *: *"([^"]+)".*/\1/')"
+    [[ -n "$v" ]] && { echo "$v|instalada"; return; }
+  fi
+  v="$(grep -m1 "\"$pkg\" *:" "$PROJECT_DIR/package.json" 2>/dev/null \
+        | sed -E "s#.*\"$pkg\" *: *\"([^\"]+)\".*#\\1#" | sed -E 's/^[^0-9]*//')"
+  [[ -n "$v" ]] && echo "$v|rango" || true
+}
+
+# skill_version_field <framework> <campo> -> valor de metadata.versions.<campo>
+# en la skill de arquitectura de ese framework (ej. verified_against).
+skill_version_field() {
+  local skill="$ARCH_DIR/skills/$1/$1-architecture/SKILL.md"
+  [[ -f "$skill" ]] || return 0
+  grep -m1 -E "^ +$2:" "$skill" | sed -E 's/^ +[a-z_]+: *"?([^"]*)"?.*/\1/'
+}
+
+# check_version_drift <framework> <versión>: compara la versión mayor del
+# proyecto contra el rango que cubre la skill. Nunca bloquea — avisa que el
+# agente va a verificar contra doc viva en las áreas que toque.
+check_version_drift() {
+  local fw="$1" v="$2" major min ver
+  major="${v%%.*}"
+  [[ "$major" =~ ^[0-9]+$ ]] || return 0
+  min="$(skill_version_field "$fw" min_supported)"
+  ver="$(skill_version_field "$fw" verified_against)"
+  [[ "$min" =~ ^[0-9]+$ && "$ver" =~ ^[0-9]+$ ]] || return 0
+  if (( major < min )); then
+    warn "$fw $v es anterior a lo que cubre $fw-architecture (v$min–v$ver): el agente va a verificar las APIs contra la doc de v$major antes de usarlas"
+  elif (( major > ver )); then
+    warn "$fw $v es más nuevo que lo verificado en $fw-architecture (v$min–v$ver): el agente va a consultar doc viva de v$major en las áreas que toque (y reportar desfases)"
+  else
+    ok "$fw $v dentro del rango verificado de las skills (v$min–v$ver)"
+  fi
+}
 
 # ---------------------------------------------------------------------------
 # 2. Adaptadores por agente: rutas y capacidades
@@ -231,36 +280,69 @@ ensure_engram_project_config() {
 # Por eso no sigue el patrón command -v de ensure_openspec/ensure_engram: se
 # llama más abajo, junto al wiring por-agente de OpenSpec/Engram (sección
 # "Orquestar los motores"), no en "Chequeando motores…".
-ensure_playwright_mcp() {
+# ensure_mcp_server <nombre> <scope-claude> <aviso-si-se-salta> <args de npx...>
+# Registra un MCP server que se lanza con `npx <args>`. Mismo esquema para
+# todos los MCP del ecosistema: en claude lo registra (idempotente, chequea
+# `claude mcp list` primero); en cursor/codex imprime el snippet manual
+# (auto-escribir esos archivos arriesga romper una config existente); en
+# opencode solo apunta, porque el formato no está confirmado.
+# scope-claude: "local" = por proyecto (se registra parado en $PROJECT_DIR,
+# que es la clave del scope local), "user" = global para la persona.
+json_args() { local out="" a; for a in "$@"; do out+="${out:+, }\"$a\""; done; echo "[$out]"; }
+ensure_mcp_server() {
+  local name="$1" scope="$2" skip_msg="$3"; shift 3
+  local args=("$@")
   case "$AGENT" in
     claude)
-      if command -v claude >/dev/null 2>&1 && claude mcp list 2>/dev/null | grep -qi '^playwright:'; then
-        ok "Playwright MCP ya registrado en Claude Code"
+      if command -v claude >/dev/null 2>&1 && (cd "$PROJECT_DIR" && claude mcp list 2>/dev/null) | grep -qi "^$name:"; then
+        ok "$name MCP ya registrado en Claude Code"
       else
-        warn "Playwright MCP no está registrado en Claude Code."
-        if confirm "registrar con: claude mcp add playwright -- npx @playwright/mcp@latest"; then
-          run "claude mcp add playwright -- npx @playwright/mcp@latest"
-          ok "Playwright MCP registrado"
+        warn "$name MCP no está registrado en Claude Code."
+        if confirm "registrar con: claude mcp add -s $scope $name -- npx ${args[*]}"; then
+          run "cd '$PROJECT_DIR' && claude mcp add -s $scope $name -- npx ${args[*]}"
+          ok "$name MCP registrado"
         else
-          warn "se salta — /fea:review no va a poder abrir un browser real"
+          warn "se salta — $skip_msg"
         fi
       fi
       ;;
     cursor)
       warn "Cursor: agregá manualmente a .cursor/mcp.json (o ~/.cursor/mcp.json):"
-      log '  { "mcpServers": { "playwright": { "command": "npx", "args": ["@playwright/mcp@latest"] } } }'
+      log "  { \"mcpServers\": { \"$name\": { \"command\": \"npx\", \"args\": $(json_args "${args[@]}") } } }"
       ;;
     codex)
       warn "Codex CLI: agregá manualmente a ~/.codex/config.toml:"
-      log '  [mcp_servers.playwright]'
+      log "  [mcp_servers.$name]"
       log '  command = "npx"'
-      log '  args = ["@playwright/mcp@latest"]'
+      log "  args = $(json_args "${args[@]}")"
       ;;
     opencode)
       warn "OpenCode: formato de MCP servers no confirmado en esta versión —"
-      log "  revisá la doc de tu instalación y apuntá el server 'playwright' a: npx @playwright/mcp@latest"
+      log "  revisá la doc de tu instalación y apuntá el server '$name' a: npx ${args[*]}"
       ;;
   esac
+}
+
+ensure_playwright_mcp() {
+  ensure_mcp_server playwright local "/fea:review no va a poder abrir un browser real" @playwright/mcp@latest
+}
+
+# Doc viva por versión (ver skills/core/framework-version-awareness). Context7
+# es la fuente genérica para los tres frameworks — scope user, no depende del
+# proyecto. El MCP oficial del framework, cuando existe, va scope local: lee
+# el workspace (versión, angular.json) del proyecto donde corre.
+ensure_context7_mcp() {
+  ensure_mcp_server context7 user "el agente va a caer a la doc web oficial cuando la versión no coincida con las skills" -y @upstash/context7-mcp
+}
+ensure_framework_mcp() {
+  local fw
+  for fw in "${FRAMEWORKS[@]}"; do
+    case "$fw" in
+      angular) ensure_mcp_server angular-cli local "sin search_documentation/get_best_practices del Angular CLI (queda Context7)" -y @angular/cli mcp ;;
+      next)    ensure_mcp_server next-devtools local "sin la doc/diagnóstico oficial de Next (queda Context7)" -y next-devtools-mcp@latest ;;
+      react)   log "React: sin MCP oficial de docs — la doc viva sale de Context7 (o react.dev)" ;;
+    esac
+  done
 }
 
 # ---------------------------------------------------------------------------
@@ -459,6 +541,17 @@ write_fea_manifest() {
     printf '  "ecosystem_commit": "%s",\n' "$commit"
     printf '  "installed_at": "%s",\n'      "$date"
     printf '  "agent": "%s",\n'             "$AGENT"
+    echo '  "frameworks": ['
+    local i fw_first=1
+    for i in "${!FRAMEWORKS[@]}"; do
+      [[ $fw_first -eq 0 ]] && printf ',\n'
+      printf '    { "name": "%s", "package": "%s", "version": "%s", "version_source": "%s", "skill_min_supported": "%s", "skill_verified_against": "%s" }' \
+        "${FRAMEWORKS[$i]}" "$(framework_package "${FRAMEWORKS[$i]}")" "${FW_VERSIONS[$i]}" "${FW_VERSION_SOURCES[$i]}" \
+        "$(skill_version_field "${FRAMEWORKS[$i]}" min_supported)" "$(skill_version_field "${FRAMEWORKS[$i]}" verified_against)"
+      fw_first=0
+    done
+    [[ $fw_first -eq 0 ]] && printf '\n'
+    echo '  ],'
     echo '  "skills": ['
     local entries="" chunk
     entries="$(manifest_skill_entries "$ARCH_DIR/skills/core" "core")"
@@ -499,6 +592,21 @@ if [[ ${#FRAMEWORKS[@]} -eq 0 ]]; then
   log "stack front: ninguno detectado (solo core)"
   [[ -f "$PROJECT_DIR/package.json" ]] || warn "proyecto nuevo sin stack todavía — cuando lo scaffoldees (ng new / create-next-app / npm create vite), volvé a correr este instalador para sumar la skill de arquitectura correspondiente"
 else log "stack front: ${FRAMEWORKS[*]}"; fi
+
+# --- Versión de cada framework (paralelo a FRAMEWORKS[], mismo índice) ---
+FW_VERSIONS=(); FW_VERSION_SOURCES=()
+for fw in "${FRAMEWORKS[@]}"; do
+  vs="$(installed_version "$(framework_package "$fw")")"
+  if [[ -z "$vs" ]]; then
+    FW_VERSIONS+=(""); FW_VERSION_SOURCES+=("")
+    warn "$fw: no pude resolver la versión — el agente la va a resolver del lockfile"
+  else
+    FW_VERSIONS+=("${vs%%|*}"); FW_VERSION_SOURCES+=("${vs#*|}")
+    log "$fw: ${vs%%|*} (${vs#*|})"
+    [[ "${vs#*|}" == "rango" ]] && log "  (sin node_modules: es el rango de package.json, no la versión exacta)"
+    check_version_drift "$fw" "${vs%%|*}"
+  fi
+done
 
 # --- Agente ---
 step "Detectando agente de IA…"
@@ -584,6 +692,10 @@ ensure_engram_project_config
 step "Cableando revisión con Playwright…"
 ensure_playwright_mcp
 
+step "Cableando doc viva por versión (Context7 + MCP oficial del framework)…"
+ensure_context7_mcp
+ensure_framework_mcp
+
 # Para Claude: asegurar que CLAUDE.md importe AGENTS.md (sin pisar lo de OpenSpec)
 if [[ "$AGENT" == "claude" && $DRY_RUN -eq 0 ]]; then
   if ! grep -q "@AGENTS.md" "$PROJECT_DIR/CLAUDE.md" 2>/dev/null; then
@@ -593,7 +705,7 @@ fi
 
 step "Listo."
 log "Núcleo portable: skills (core${FRAMEWORKS:+ + ${FRAMEWORKS[*]}}) + agentes (roles + subagentes) + bloque AGENTS.md."
-log "Motores: OpenSpec (workflow) + Engram (memoria) + Playwright MCP (revisión en vivo)."
+log "Motores: OpenSpec (workflow) + Engram (memoria) + Playwright MCP (revisión en vivo) + Context7/MCP oficial (doc por versión)."
 [[ ${#DOMAINS[@]} -gt 0 ]] && log "Domains opt-in instalados: ${DOMAINS[*]}." || true
 log "Solo cambiaron las rutas según el agente — eso es la capa de adaptadores."
 [[ $DRY_RUN -eq 1 ]] && log "(fue un dry-run: no se tocó nada)" || true
