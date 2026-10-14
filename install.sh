@@ -444,6 +444,25 @@ extract_target_rule_value() {
   ' "$target"
 }
 
+# extract_exception_bullets [--fea]
+# Lee AGENTS.md por stdin y devuelve los bullets de "### Excepciones a los
+# estándares": desde el primer "- " de esa sección hasta el fin del bloque FEA
+# (con --fea, para el target) o el fin del archivo (sin --fea, para el
+# AGENTS.md de este repo, que no lleva marcadores). El párrafo intro de la
+# sección no se incluye: ese viene siempre de la versión nueva.
+extract_exception_bullets() {
+  local need_fea=0; [[ "${1:-}" == "--fea" ]] && need_fea=1
+  awk -v need_fea="$need_fea" '
+    /<!-- FEA:START -->/ { infea=1; next }
+    /<!-- FEA:END -->/   { infea=0; insec=0; next }
+    need_fea && !infea   { next }
+    /^### Excepciones a los estándares/ { insec=1; inlist=0; next }
+    insec && /^#/        { insec=0 }
+    insec && !inlist && /^- / { inlist=1 }
+    insec && inlist      { print }
+  '
+}
+
 # ¿ya está completada esa línea (ni vacía ni un placeholder <!-- ... -->,
 # viejo o nuevo formato)?
 rule_value_is_filled() {
@@ -480,6 +499,24 @@ inject_agents_block() {
   [[ $any_prompted  -eq 1 ]] && ok "Reglas del proyecto: respuestas nuevas cargadas"
   [[ $any_preserved -eq 0 && $any_prompted -eq 0 && $interactive -eq 0 ]] && \
     warn "Reglas del proyecto sin completar — quedan marcadores <!-- TODO: completar --> en AGENTS.md"
+
+  # --- Excepciones a los estándares: preservar los bullets del target ---
+  # Si el target ya tenía bullets propios (distintos del placeholder de esta
+  # versión), se conservan tal cual; el intro de la sección se actualiza.
+  # Asume que "Excepciones" es la última sección de AGENTS.md: el splice
+  # corta $block en su primer bullet y le pega los del target.
+  local old_exc new_exc
+  old_exc="$(extract_exception_bullets --fea < "$target")"
+  new_exc="$(printf '%s\n' "$block" | extract_exception_bullets)"
+  if [[ -n "$old_exc" && "$old_exc" != "$new_exc" ]]; then
+    block="$(printf '%s\n' "$block" | awk '
+      /^### Excepciones a los estándares/ { insec=1 }
+      insec && /^- / { exit }
+      { print }
+    ')"
+    block="$block"$'\n\n'"$old_exc"  # $(...) se come la línea en blanco previa
+    ok "Excepciones a los estándares: se preservaron las ya cargadas"
+  fi
 
   # quita un bloque FEA previo si existe
   awk '/<!-- FEA:START -->/{s=1} s!=1{print} /<!-- FEA:END -->/{s=0}' "$target" > "$target.tmp"
