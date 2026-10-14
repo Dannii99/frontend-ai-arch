@@ -27,6 +27,15 @@ manejás foco y ARIA con Angular CDK vs con React cambia.
 Así, un proyecto siempre recibe el criterio (core) y, encima, la técnica del
 framework que realmente usa.
 
+## Versiones
+
+Cada skill de arquitectura de framework declara en su frontmatter qué rango
+de versiones cubre (`metadata.versions`) y marca `(desde vX)` lo que depende
+de una API reciente. El protocolo para resolver la versión real del proyecto
+y consultar doc viva cuando queda fuera de ese rango es una skill core
+(`framework-version-awareness`) — es igual para cualquier framework, así que
+no se repite en cada carpeta.
+
 ## Dónde va cada skill tuya
 
 - ¿Sirve igual para cualquier front? → `core/`

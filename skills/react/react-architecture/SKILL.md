@@ -16,6 +16,12 @@ compatibility: react
 metadata:
   category: react-architecture
   framework: react
+  versions:
+    package: "react"
+    min_supported: "18"
+    verified_against: "19"
+    verified_at: "2026-07-28"
+    reference: react-references (Vercel Engineering 1.0.0, enero 2026)
 ---
 
 # React Architecture
@@ -36,6 +42,17 @@ de arquitectura (Facade, Repository, Adapter, límites entre módulos) viven en
 cualquier front, no lo repitas acá: es core. Y si el proyecto es Next, no
 cargues esta skill además de `next/` — Next ya es React, y `next-architecture`
 cubre sus propias decisiones de Server/Client Components.
+
+## Versión del framework
+
+Esta skill está verificada contra React 19 y aplica desde React 18 (ver
+`metadata.versions`). Antes de escribir código, resolvé la versión real de
+`react` (y de las librerías satélite que deciden el consejo: router, TanStack
+Query, React Compiler) siguiendo `framework-version-awareness` (core) — no
+repitas acá ese protocolo. Los defaults marcados `(desde vX)` solo aplican si
+el proyecto ya está en `vX` o más; fuera del rango, el criterio de
+arquitectura sigue valiendo pero la API se verifica contra la doc de la
+versión del proyecto.
 
 ## Cuándo usar
 
@@ -122,7 +139,8 @@ Si ninguna aplica, no sumes un store — es complejidad que no se paga sola.
 
 Antes de agregar `useMemo`/`useCallback`/`memo` a mano, confirmá si el
 proyecto tiene **React Compiler** habilitado (`babel-plugin-react-compiler` o
-el equivalente en su build). Si lo tiene, la memoización manual **no hace
+el equivalente en su build; estable desde Compiler 1.0, pensado para React 19
+— en 17–18 requiere además `react-compiler-runtime`). Si lo tiene, la memoización manual **no hace
 falta** — el compilador ya optimiza los re-renders automáticamente, y
 agregarla igual es ruido sin beneficio (ver la nota de
 `react-references`, regla `rerender-memo`). Si el proyecto no lo tiene
@@ -140,6 +158,10 @@ Librería de forms es una decisión recurrente, no un detalle menor:
 - **Controlled inputs nativos** (`useState` + `onChange`) solo para 1-2
   campos triviales sin validación cruzada (ej. un buscador). No lo escales a
   un form real — ahí ya corresponde React Hook Form.
+- **Actions de React** (`<form action>`, `useActionState`, `useFormStatus`)
+  `(desde v19)`: no reemplazan a React Hook Form como default en React puro
+  (sin servidor que reciba la action no aportan mucho); usalas si el proyecto
+  ya las adoptó. En v18 no existen.
 
 ## Testing: qué se testea y qué no
 
@@ -200,6 +222,8 @@ patrón ya establecido gana salvo que el usuario pida migrar.
 
 ## Al terminar, reportá
 
+0. Versión de React detectada y si cayó dentro del rango de esta skill (ver
+   `framework-version-awareness`); qué consultaste en doc viva, si hizo falta.
 1. Dónde ubicaste los archivos nuevos y por qué (core/shared/feature).
 2. Si un dato nuevo quedó en TanStack Query/SWR o en estado de cliente, y por
    qué.

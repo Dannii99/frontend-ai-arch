@@ -27,6 +27,7 @@ skills/
     frontend-clean-code/          # micro code quality: naming, typing, function size
     frontend-design-principles/   # SOLID + patterns (Facade, Repository, Adapter) — sits above frontend-clean-code
     frontend-security/             # XSS, injection, CSRF, secrets, input validation — app runtime, not deploy
+    framework-version-awareness/   # resolve the target's real framework version, compare to metadata.versions, consult live docs when out of range
     ui-visual-craft/
     motion-design-system/
     documentation-writer/
@@ -163,6 +164,27 @@ metadata:
 ---
 ```
 
+Framework architecture skills (`*-architecture`, plus `next-references`)
+also carry a version-coverage block — house-owned, so it never goes on a
+vendored file:
+
+```yaml
+metadata:
+  versions:
+    package: "@angular/core"     # npm package whose version decides the advice
+    min_supported: "17"          # below this, verify APIs against that version's docs
+    verified_against: "21"       # version the skill was written/reviewed against
+    verified_at: "2026-07-23"
+```
+
+`install.sh` reads `min_supported`/`verified_against` (via
+`skill_version_field()`) to warn about drift and to fill
+`.fea/manifest.json`'s `frameworks[]`; the runtime protocol lives in
+`skills/core/framework-version-awareness/`. When you bump a framework skill
+to a new release, update `verified_against`/`verified_at` and annotate any
+version-dependent default with `(desde vX)` plus a fallback for older
+versions — don't fork the skill per version.
+
 Recurring conventions worth preserving when writing a new skill body:
 - State when to use it and when *not* to.
 - A house architecture skill states what it does *not* cover and cites the
@@ -265,11 +287,11 @@ first, same caveat this repo already applies elsewhere.
 The installer equips a *target* project (elsewhere on disk) with this
 ecosystem. Reading it top to bottom explains the whole install flow:
 
-1. Detects package manager (`pnpm-lock.yaml`/`yarn.lock`/`bun.lockb`/default npm) and framework from the target's `package.json`: `@angular/core` → angular; `next` → next; else `react` → react. Next wins over react when both are present (a Next app always depends on `react` too, but `next-architecture` explicitly says not to load `react/` alongside it — see `has_dep` branching in the "Stack" section of the script).
+1. Detects package manager (`pnpm-lock.yaml`/`yarn.lock`/`bun.lockb`/default npm) and framework from the target's `package.json`: `@angular/core` → angular; `next` → next; else `react` → react. Next wins over react when both are present (a Next app always depends on `react` too, but `next-architecture` explicitly says not to load `react/` alongside it — see `has_dep` branching in the "Stack" section of the script). Then resolves each framework's version with `installed_version()` (`node_modules/<pkg>/package.json`, falling back to the `package.json` range marked as "rango" — lockfiles are deliberately not parsed in bash; the agent does that at runtime per `framework-version-awareness`) and `check_version_drift()` warns (never blocks) when the major is outside the architecture skill's `metadata.versions` range. Versions are kept in `FW_VERSIONS[]`/`FW_VERSION_SOURCES[]`, index-parallel to `FRAMEWORKS[]`, and written into `.fea/manifest.json`'s `frameworks[]`.
 2. Detects which AI agent binary is installed (`claude`, `cursor`, `codex`, `opencode`); prompts if 0 or 2+ found.
 3. Checks for the external "engines" this ecosystem depends on — OpenSpec (spec-driven dev workflow) and Engram (persistent memory via MCP) — and offers (never forces) to install missing ones.
 4. Copies `skills/core/` + the detected framework's skill dir (including its vendored reference and any nested `references/` files, since it copies the whole subtree) into the agent's own global skills directory (e.g. `~/.claude/skills`) — never into the target repo. Copies `agents/` (all 8 files — conversational roles + mechanical subagents, see "agents/" above) into the agent's own subagents directory (e.g. `~/.claude/agents`) via `copy_optional_dir()`, with a guaranteed destination for all 4 supported agents. Copies `commands/` into the agent's own commands directory (e.g. `~/.claude/commands`) via `copy_commands()` — same guaranteed/best-effort split as `commands_dir_for()`, but agent-aware about file layout (see the "commands/fea/\*" caveat above for the Claude-nested vs. OpenCode-flattened difference).
-5. Injects the `AGENTS.md` content into the target project's `AGENTS.md` as an idempotent `<!-- FEA:START -->...<!-- FEA:END -->` block, then runs `openspec init --tools "$AGENT"` (first run) or `openspec update` (if `openspec/` already exists — avoids re-running `init --force` over real specs), `engram setup <agent>`, `ensure_engram_project_config()`, and `ensure_playwright_mcp` — a third engine, wired the same way as Engram (per-agent MCP registration, not a global binary check). `ensure_engram_project_config()` writes `.engram/config.json` (`{"project_name": "<dir name>"}`) at the target project's root — Engram itself is one global SQLite DB per machine (`engram setup <agent>` is per-agent, not per-project), but it auto-tags each memory with a project name it detects from the enclosing git repo; this file just pins that name so it doesn't drift if the project folder gets moved or renamed later (see Engram's own `AGENT-SETUP.md`). It's idempotent (won't overwrite an existing pinned name) and unconditional — it doesn't require the `engram` binary to be installed yet, since it's only the file Engram will read once it is. For `claude` it runs `claude mcp add playwright -- npx @playwright/mcp@latest` (idempotent — checks `claude mcp list` first); for `cursor`/`codex` it prints the manual config snippet (`.cursor/mcp.json` / `~/.codex/config.toml`) since auto-writing those risks corrupting an existing file; for `opencode` it prints a pointer and explicitly flags the exact config format as unconfirmed for that agent — don't treat that hedge as a TODO to silently "fix" without verifying against a real OpenCode install first. OpenSpec's tool IDs are identical to this script's own `$AGENT` values, so no mapping function is needed there (unlike `engram_agent_arg()`).
+5. Injects the `AGENTS.md` content into the target project's `AGENTS.md` as an idempotent `<!-- FEA:START -->...<!-- FEA:END -->` block, then runs `openspec init --tools "$AGENT"` (first run) or `openspec update` (if `openspec/` already exists — avoids re-running `init --force` over real specs), `engram setup <agent>`, `ensure_engram_project_config()`, and `ensure_playwright_mcp` — a third engine, wired the same way as Engram (per-agent MCP registration, not a global binary check) — followed by `ensure_context7_mcp` (Context7, Claude scope `user`) and `ensure_framework_mcp` (Angular CLI MCP `angular-cli` / `next-devtools`, Claude scope `local`; React has no official docs MCP, so it relies on Context7): the live-docs sources `framework-version-awareness` consults. All of them go through `ensure_mcp_server()`, which runs `claude mcp list`/`claude mcp add` from inside `$PROJECT_DIR` because Claude's `local` scope is keyed by the working directory. `ensure_engram_project_config()` writes `.engram/config.json` (`{"project_name": "<dir name>"}`) at the target project's root — Engram itself is one global SQLite DB per machine (`engram setup <agent>` is per-agent, not per-project), but it auto-tags each memory with a project name it detects from the enclosing git repo; this file just pins that name so it doesn't drift if the project folder gets moved or renamed later (see Engram's own `AGENT-SETUP.md`). It's idempotent (won't overwrite an existing pinned name) and unconditional — it doesn't require the `engram` binary to be installed yet, since it's only the file Engram will read once it is. For `claude` it runs `claude mcp add -s local playwright -- npx @playwright/mcp@latest` (idempotent — checks `claude mcp list` first); for `cursor`/`codex` it prints the manual config snippet (`.cursor/mcp.json` / `~/.codex/config.toml`) since auto-writing those risks corrupting an existing file; for `opencode` it prints a pointer and explicitly flags the exact config format as unconfirmed for that agent — don't treat that hedge as a TODO to silently "fix" without verifying against a real OpenCode install first. OpenSpec's tool IDs are identical to this script's own `$AGENT` values, so no mapping function is needed there (unlike `engram_agent_arg()`).
 
 Key flags: `--project <path>`, `--agent <name>`, `--yes`, `--dry-run`, `--with <domain1,domain2>`.
 
@@ -280,11 +302,13 @@ for a new agent, that's where to start. `skills_dir_for()` and
 `agents_dir_for()` both guarantee a real destination for all 4 supported
 agents (`skills_dir_for()` is the one with `exit 1` if the agent itself is
 unsupported); `commands_dir_for()` is the only genuinely best-effort one (see
-"commands/fea/\*" above). `ensure_playwright_mcp()` and `copy_commands()` are
+"commands/fea/\*" above). `ensure_mcp_server()` and `copy_commands()` are
 the two exceptions to "lookup function returns a path" — both do their own
 per-agent `case` because they involve agent-specific behavior beyond
-resolving a destination: `ensure_playwright_mcp()` because registering an MCP
-server is an action (a command to run, or a config snippet to print), not a
+resolving a destination: `ensure_mcp_server()` (shared by
+`ensure_playwright_mcp()`, `ensure_context7_mcp()` and
+`ensure_framework_mcp()` — add a new MCP by adding a one-line caller, not a
+new `case`) because registering an MCP server is an action (a command to run, or a config snippet to print), not a
 directory; `copy_commands()` because the file layout itself differs by agent
 (Claude's nested `fea/` subfolder vs. OpenCode's flattened `fea-*.md`, see
 above) even though both write to the path `commands_dir_for()` resolves. Both
