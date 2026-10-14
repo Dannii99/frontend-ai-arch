@@ -33,7 +33,10 @@ disponibles.
    - Los specs del change (`openspec/changes/<nombre>/specs/`) — los
      escenarios WHEN/THEN definen los casos a cubrir.
    - Los REQ-IDs de cada `### Requirement: REQ-NNN — <nombre>` del spec —
-     se usan para taggear cada test generado.
+     se usan para taggear cada test generado — y su línea `Verificación:`
+     (`test` | `e2e` | `visual`; sin línea = `test`). Los REQs `visual` no
+     se le pasan a `test-generator`: se demuestran con evidencia de revisión
+     (`/fea:review` o manual), no con un test.
    - El código implementado — las firmas reales que los tests deben invocar.
    - La sección de testing de la skill de arquitectura del stack detectado
      (`angular-architecture` / `react-architecture` / `next-architecture`):
@@ -45,20 +48,26 @@ disponibles.
 
 4. **Delegar al agente `test-generator`** con el nombre del change. Lee el
    código implementado (firmas) + los specs (casos) y escribe los tests
-   siguiendo la convención de ubicación detectada. Los escenarios que la
-   skill de arquitectura marque como "e2e" (golden path crítico de negocio)
-   los genera como `.spec.ts` de Playwright en vez de unit/integration — ver
-   `playwright-visual-review` si el proyecto la instaló. No generes los
+   siguiendo la convención de ubicación detectada. Solo los REQs marcados
+   `Verificación: e2e` se generan como `.spec.ts` de Playwright; el resto va
+   a unit/integration. Ver `playwright-visual-review` si el proyecto la
+   instaló. No generes los
    tests vos mismo. Cada test generado lleva un prefijo literal `[REQ-NNN]`
    en su título/descripción (el ID del requirement que cubre) — agnóstico
    de framework de testing, para poder grepearlo en el output del test
    runner sin depender de la ubicación del archivo.
 
 5. **Correr los tests** con el script `test` del `package.json`. Si
-   `test-generator` generó `.spec.ts` de Playwright, correrlos aparte con
-   `npx playwright test` (o el script `test:e2e` si el proyecto ya lo
-   define) — no son parte del mismo runner que unit/integration. Capturar
-   pasados/fallados de ambos.
+   `test-generator` generó `.spec.ts` de Playwright, correrlos aparte —
+   no son parte del mismo runner que unit/integration — y **solo los de
+   este change**, filtrando por sus REQ-IDs:
+   `npx playwright test --grep "\[REQ-(00X|00Y)\]"` (o el script
+   `test:e2e` del proyecto con el mismo `--grep`). La suite E2E completa no
+   corre por defecto; sugerila antes de `/fea:archive` si el change toca un
+   flujo compartido con otras features. Capturar pasados/fallados de ambos.
+
+   Estos `.spec.ts` usan el runner `@playwright/test` del proyecto, no el
+   MCP de Playwright: funcionan aunque el MCP no esté registrado.
 
 6. **Reportar:**
    - **Todo pasa** → listo; sugerir `/fea:archive`.
@@ -81,6 +90,7 @@ disponibles.
 Generados: N tests
 Resultado: X pasaron, Y fallaron
 Escenarios del spec cubiertos: M/M
+REQs visual (sin test, requieren evidencia de revisión): <lista | ninguno>
 
 <si hay fallas: lista con causa probable + acción recomendada>
 <si todo pasa: "Listo para archivar: /fea:archive">

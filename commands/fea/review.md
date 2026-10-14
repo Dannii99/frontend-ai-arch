@@ -20,10 +20,11 @@ disponibles.
 
 2. **Chequear que el MCP de Playwright esté disponible.** Si las
    herramientas `browser_*` no están accesibles en esta sesión, PARAR y
-   avisar: "Playwright MCP no está conectado. Corré `install.sh` de nuevo, o
-   registralo manualmente: `claude mcp add playwright -- npx
-   @playwright/mcp@latest`." No intentes simular una revisión sin el MCP
-   real.
+   avisar: "Playwright MCP no está conectado (es opt-in). Corré `install.sh
+   --with playwright-visual-review`, o registralo manualmente: `claude mcp
+   add playwright -- npx @playwright/mcp@latest`. Si preferís revisar a
+   mano, confirmá los viewports que miraste y lo registro como evidencia
+   manual (ver paso 7)." No intentes simular una revisión sin el MCP real.
 
 3. **Confirmar que la app está corriendo.** Preguntar o inferir la
    URL/puerto (ej. `npm run dev` en `localhost:3000`). Si no responde, PARAR
@@ -41,7 +42,15 @@ disponibles.
 6. **Mostrar el reporte** que devuelve `visual-reviewer` (formato
    Crítico/Advertencia/Sugerencia + veredicto).
 
-7. **Siguiente paso:**
+7. **Registrar evidencia de los REQs `visual`.** Si el veredicto es
+   aprobado, por cada requirement del change con `Verificación: visual` que
+   la revisión cubrió, agregar al `tasks.md` del change:
+   `- [x] [REQ-NNN] verificado visualmente (/fea:review, <viewports>, <fecha>)`.
+   Es la evidencia que exige el gate de trazabilidad de `/fea:archive`. Si
+   el MCP no estaba y el usuario confirmó una revisión manual, la línea
+   dice `manual:` en vez de `/fea:review`.
+
+8. **Siguiente paso:**
    - ✅ Aprobado → sugerir `/fea:archive <nombre>`.
    - ❌ Con críticos → listar qué arreglar vía `/fea:execute`/`/fea:fix` y
      re-correr `/fea:review` después.
@@ -49,7 +58,9 @@ disponibles.
 ## Guardrails
 
 - No es obligatorio — es el mismo criterio que `/fea:verify`: sugerido, no
-  bloqueante, salvo que el usuario pida que sí bloquee.
+  bloqueante, salvo que el usuario pida que sí bloquee. Ojo: si el change
+  tiene REQs `visual`, `/fea:archive` sí exige su evidencia, ya sea de este
+  comando o de una revisión manual confirmada.
 - Nunca reemplaza `/fea:verify` ni `code-auditor` — es el complemento de
   runtime/visual, no el chequeo de código ni de artifacts.
 - Sin anidar agentes — el comando delega en `visual-reviewer` una vez,
